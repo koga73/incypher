@@ -26,7 +26,6 @@ module.exports = class CryptoProvider {
 		const encrypted = Buffer.concat([ciphertext, tag]).toString("base64");
 		return encrypted;
 	}
-
 	static decrypt(iv, key, ciphertext) {
 		if (iv.byteLength != this.IV_LEN) {
 			throw new Error("invalid iv length");
@@ -54,7 +53,6 @@ module.exports = class CryptoProvider {
 	static randomIV() {
 		return crypto.randomBytes(this.IV_LEN);
 	}
-
 	//GCM MUST NOT REUSE IV WITH SAME KEY
 	//Although GCM key length can be variable, 12-bit is recommended
 	//NIST SP-800-38D: 8.2.1 Deterministic Construction
@@ -76,6 +74,7 @@ module.exports = class CryptoProvider {
 			num |= startIV[i + 3] << 24;
 			nums.push(num);
 		}
+		//GCM recommends first byte be fixed and last two dynamic per message
 		nums[0] ^= fixed;
 		nums[1] ^= incremental;
 		nums[2] ^= incremental;
@@ -95,19 +94,17 @@ module.exports = class CryptoProvider {
 		return fixedVal;
 	}
 
-	static byteArrayToHex(byteArray) {
-		return Buffer.from(byteArray).toString("hex");
+	static arrayBufferToHex(arrayBuffer) {
+		return Buffer.from(arrayBuffer).toString("hex");
 	}
-
-	static hexToByteArray(hex) {
+	static hexToArrayBuffer(hex) {
 		return new Uint8Array(Buffer.from(hex, "hex"));
 	}
 
-	static atob(unencoded) {
-		return Buffer.from(unencoded).toString("base64");
-	}
-
-	static btoa(base64Encoded) {
+	static atob(base64Encoded) {
 		return Buffer.from(base64Encoded, "base64").toString();
+	}
+	static btoa(unencoded) {
+		return Buffer.from(unencoded).toString("base64");
 	}
 };
