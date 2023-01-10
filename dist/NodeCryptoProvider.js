@@ -35,8 +35,8 @@ module.exports = class CryptoProvider {
 		}
 		const encrypted = Buffer.from(ciphertext, "base64");
 		const decipher = crypto.createDecipheriv(this.SYMMETRIC_ALGORITHM, key, iv);
-		decipher.setAuthTag(encrypted.slice(-this.TAG_LEN));
-		const decrypted = decipher.update(encrypted.slice(0, encrypted.length - this.TAG_LEN), "binary", this.ENCODING) + decipher.final(this.ENCODING);
+		decipher.setAuthTag(encrypted.subarray(-this.TAG_LEN));
+		const decrypted = decipher.update(encrypted.subarray(0, encrypted.length - this.TAG_LEN), "binary", this.ENCODING) + decipher.final(this.ENCODING);
 		return decrypted;
 	}
 
