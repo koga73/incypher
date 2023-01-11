@@ -5,6 +5,7 @@ const EXAMPLE_NAME = "ravencoin";
 const FILENAME_REGEX = /^.*?\.?([^\/\\]+)$/; //https://regex101.com/r/MWeJOz/2
 
 const fs = require("fs");
+const childProcess = require("child_process");
 const homeDir = require("os").homedir();
 const readline = require("readline").createInterface({
 	input: process.stdin,
@@ -71,8 +72,11 @@ async function run() {
 			}
 			const openKey = args[argIndex + 1];
 			const openFile = openKey.replace(FILENAME_REGEX, "$1");
-			await fs.promises.writeFile(zip.ensureExtension(openFile), await zip.retrieve(openKey));
-			console.log("TODO: Spawn child process");
+			const openFileName = zip.ensureExtension(openFile);
+			await fs.promises.writeFile(openFileName, await zip.retrieve(openKey));
+			childProcess.execSync(openFileName);
+			console.log("TODO: Secure erase");
+			await fs.promises.rm(openFileName);
 			break;
 
 		case "list":
@@ -108,7 +112,8 @@ async function run() {
 			}
 			const exportKey = args[argIndex + 1];
 			const exportFile = argsLen > exportNumArgs ? args[argIndex + 2] : exportKey.replace(FILENAME_REGEX, "$1");
-			await fs.promises.writeFile(zip.ensureExtension(exportFile), await zip.retrieve(exportKey));
+			const exportFileName = zip.ensureExtension(exportFile);
+			await fs.promises.writeFile(exportFileName, await zip.retrieve(exportKey));
 			break;
 
 		case "exportall":
