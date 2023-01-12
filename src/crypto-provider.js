@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-module.exports = class CryptoProvider {
+class _class {
 	static SYMMETRIC_ALGORITHM = "AES-256-GCM";
 	static IV_LEN = 12; //Bytes
 	static KEY_LEN = 32; //Bytes (32 * 8 = 256-bit)
@@ -21,9 +21,9 @@ module.exports = class CryptoProvider {
 			throw new Error("invalid key length");
 		}
 		const cipher = crypto.createCipheriv(this.SYMMETRIC_ALGORITHM, key, iv);
-		const ciphertext = Buffer.concat([cipher.update(plaintext, this.ENCODING), cipher.final()]);
+		const ciphertext = Buffer.concat([cipher.update(plaintext, "binary"), cipher.final()]);
 		const tag = cipher.getAuthTag();
-		const encrypted = Buffer.concat([ciphertext, tag]).toString("base64");
+		const encrypted = Buffer.concat([ciphertext, tag]);
 		return encrypted;
 	}
 	static decrypt(iv, key, ciphertext) {
@@ -33,10 +33,10 @@ module.exports = class CryptoProvider {
 		if (key.byteLength != this.KEY_LEN) {
 			throw new Error("invalid key length");
 		}
-		const encrypted = Buffer.from(ciphertext, "base64");
+		const encrypted = Buffer.from(ciphertext);
 		const decipher = crypto.createDecipheriv(this.SYMMETRIC_ALGORITHM, key, iv);
 		decipher.setAuthTag(encrypted.subarray(-this.TAG_LEN));
-		const decrypted = decipher.update(encrypted.subarray(0, encrypted.length - this.TAG_LEN), "binary", this.ENCODING) + decipher.final(this.ENCODING);
+		const decrypted = decipher.update(encrypted.subarray(0, encrypted.length - this.TAG_LEN), "binary") + decipher.final(this.ENCODING);
 		return decrypted;
 	}
 
@@ -93,18 +93,5 @@ module.exports = class CryptoProvider {
 		fixedVal |= hash[3] << 24;
 		return fixedVal;
 	}
-
-	static arrayBufferToHex(arrayBuffer) {
-		return Buffer.from(arrayBuffer).toString("hex");
-	}
-	static hexToArrayBuffer(hex) {
-		return new Uint8Array(Buffer.from(hex, "hex"));
-	}
-
-	static atob(base64Encoded) {
-		return Buffer.from(base64Encoded, "base64").toString();
-	}
-	static btoa(unencoded) {
-		return Buffer.from(unencoded).toString("base64");
-	}
-};
+}
+module.exports = _class;

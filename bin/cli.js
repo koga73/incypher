@@ -1,12 +1,8 @@
 #!/usr/bin/env node
 
-const DEBUG = false;
-const EXAMPLE_NAME = "ravencoin";
-const FILENAME_REGEX = /^.*?\.?([^\/\\]+)$/; //https://regex101.com/r/MWeJOz/2
-
 const fs = require("fs");
 const childProcess = require("child_process");
-const homeDir = require("os").homedir();
+const homeDir = require("os").homedir().replace(/\\/g, "/");
 const readline = require("readline").createInterface({
 	input: process.stdin,
 	output: process.stdout
@@ -14,6 +10,12 @@ const readline = require("readline").createInterface({
 
 const {name: packageName, version: packageVersion} = require("../package.json");
 const Zip = require("../src/zip");
+const CryptoProvider = require("../src/crypto-provider");
+
+const DEBUG = false;
+const EXAMPLE_NAME = "ravencoin";
+const FILE_MESSAGE = `Encrypted with ${packageName} ${packageVersion} \n`;
+const FILENAME_REGEX = /^.*?\.?([^\/\\]+)$/; //https://regex101.com/r/MWeJOz/2
 
 const args = process.argv.splice(2);
 const argsLen = args.length;
@@ -24,16 +26,18 @@ async function run() {
 		return 0;
 	}
 
-	//Create or load file data
-	let fileData = "";
+	//Check file access
 	const isFileAccessible = await fs.promises.access(homeDir, fs.constants.R_OK | fs.constants.W_OK);
 	if (isFileAccessible) {
 		throw new Error(`${homeDir} is not accessible`);
 	}
+
+	//Create or load file data
+	let fileData = "";
 	const filePath = `${homeDir}/.${packageName}`;
 	const isFileExistent = await _fileExists(filePath);
 	if (isFileExistent) {
-		fileData = await fs.promises.readFile(filePath);
+		fileData = await _readFile(filePath);
 	} else {
 		await fs.promises.writeFile(filePath, "");
 	}
@@ -75,7 +79,7 @@ async function run() {
 			const openFileName = zip.ensureExtension(openFile);
 			await fs.promises.writeFile(openFileName, await zip.retrieve(openKey));
 			childProcess.execSync(openFileName);
-			console.log("TODO: Secure erase");
+			await _secureErase(openFileName);
 			await fs.promises.rm(openFileName);
 			break;
 
@@ -192,9 +196,55 @@ function _prompt(str) {
 	});
 }
 
-function _writeFile(filePath, content) {
-	//TODO: Encrypt content
-	return fs.promises.writeFile(filePath, content);
+async function _readFile(filePath, passpharse) {
+	//Read
+	const content = await fs.promises.readFile(filePath);
+	console.log("READ", filePath);
+
+	//Decrypt
+	let output = content;
+	if (passpharse) {
+		const ciphertext = content.subarray(FILE_MESSAGE.length);
+		const startIV = new Uint8Array([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12]);
+		const fixed = CryptoProvider.deterministic32BitVal(packageName);
+		const incremental = 73;
+		const deterministicIV = CryptoProvider.deterministicIV(startIV, fixed, incremental);
+		const key = CryptoProvider.hash(passpharse);
+		try {
+			const plaintext = CryptoProvider.decrypt(deterministicIV, key, ciphertext);
+			output = plaintext;
+		} catch (err) {
+			throw new Error("Could not decrypt");
+		}
+	}
+	return output;
+}
+
+function _writeFile(filePath, content, passpharse) {
+	//Encrypt
+	let output = content;
+	if (passpharse) {
+		const startIV = new Uint8Array([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x11, 0x12]);
+		const fixed = CryptoProvider.deterministic32BitVal(packageName);
+		const incremental = 73;
+		const deterministicIV = CryptoProvider.deterministicIV(startIV, fixed, incremental);
+		const key = CryptoProvider.hash(passpharse);
+		try {
+			const ciphertext = CryptoProvider.encrypt(deterministicIV, key, content);
+			output = Buffer.concat([Buffer.from(FILE_MESSAGE, "utf8"), ciphertext]);
+		} catch (err) {
+			throw new Error("Could not encrypt");
+		}
+	}
+
+	//Write
+	const promise = fs.promises.writeFile(filePath, output);
+	console.log("WROTE", filePath);
+	return promise;
+}
+
+function _secureErase(filePath) {
+	console.log("TODO: Secure erase", filePath);
 }
 
 (async function execute() {
