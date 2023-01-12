@@ -32,6 +32,7 @@ class _class {
 				entries.push(entry);
 			}
 		});
+		entries.sort();
 		return entries;
 	}
 

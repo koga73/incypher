@@ -36,7 +36,7 @@ class _class {
 		const encrypted = Buffer.from(ciphertext);
 		const decipher = crypto.createDecipheriv(this.SYMMETRIC_ALGORITHM, key, iv);
 		decipher.setAuthTag(encrypted.subarray(-this.TAG_LEN));
-		const decrypted = decipher.update(encrypted.subarray(0, encrypted.length - this.TAG_LEN), "binary") + decipher.final(this.ENCODING);
+		const decrypted = Buffer.concat([decipher.update(encrypted.subarray(0, encrypted.length - this.TAG_LEN), "binary"), decipher.final()]);
 		return decrypted;
 	}
 
