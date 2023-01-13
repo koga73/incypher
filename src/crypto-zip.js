@@ -15,6 +15,9 @@ const FILE_MESSAGE = `encrypted with ${packageName} ${Utils.getFixedVersion(pack
 const INCREMENTAL_BUFFER_LEN = 4;
 const HEADER_SIZE = FILE_MESSAGE.length + CryptoProvider.IV_LEN + INCREMENTAL_BUFFER_LEN;
 
+//https://regex101.com/r/ajzODa/1
+const FILE_MESSAGE_REGEX = /^(.+?)\d+.*$/;
+
 class _class extends Zip {
 	constructor(config) {
 		super(config);
@@ -120,8 +123,7 @@ function _isEncrypted(content) {
 		return false;
 	}
 	const fileMessage = content.subarray(0, FILE_MESSAGE.length).toString(CryptoProvider.ENCODING);
-	//https://regex101.com/r/ajzODa/1
-	return FILE_MESSAGE.replace(/^(.+?)\d+.*$/, "$1") == fileMessage.replace(/^(.+?)\d+.*$/, "$1");
+	return FILE_MESSAGE.replace(FILE_MESSAGE_REGEX, "$1") == fileMessage.replace(FILE_MESSAGE_REGEX, "$1");
 }
 
 function _generateHeader(startIV, incremental) {

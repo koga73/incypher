@@ -15,7 +15,7 @@ const {name: packageName, version: packageVersion} = require("../package.json");
 const CryptoZip = require("../src/crypto-zip");
 const Utils = require("../src/utils");
 
-//File store constants
+//File constants
 const DEFAULT_DIR = `${homeDir}/.${packageName}`;
 const CONFIG_FILE = path.join(DEFAULT_DIR, `${packageName}-config.json`);
 const CONFIG = {
@@ -25,9 +25,9 @@ const CONFIG = {
 	store: path.join(DEFAULT_DIR, `store.${packageName}`),
 	backup: true
 };
+
 //Misc constants
 const EXAMPLE_NAME = "ravencoin";
-const FILENAME_REGEX = /^.*?\.?([^\/\\]+)$/; //https://regex101.com/r/MWeJOz/2
 
 //Args
 const args = process.argv.splice(2);
@@ -125,7 +125,7 @@ async function _parseArguments() {
 				throw new Error("Open key required");
 			}
 			const openKey = args[argIndex + 1];
-			const openFile = openKey.replace(FILENAME_REGEX, "$1");
+			const openFile = path.parse(openKey).base;
 			const openFileName = path.join(DEFAULT_DIR, Utils.ensureExtension(openFile));
 
 			console.log("READ", filePath);
@@ -189,7 +189,7 @@ async function _parseArguments() {
 				throw new Error("File required");
 			}
 			const importFile = args[argIndex + 1];
-			const importKey = argsLen > importNumArgs ? args[argIndex + 2] : importFile.replace(FILENAME_REGEX, "$1");
+			const importKey = argsLen > importNumArgs ? args[argIndex + 2] : path.parse(importFile).base;
 			const importData = await fs.promises.readFile(importFile);
 
 			console.log("READ", filePath);
@@ -213,7 +213,7 @@ async function _parseArguments() {
 				throw new Error("Export key required");
 			}
 			const exportKey = args[argIndex + 1];
-			const exportFile = argsLen > exportNumArgs ? args[argIndex + 2] : exportKey.replace(FILENAME_REGEX, "$1");
+			const exportFile = argsLen > exportNumArgs ? args[argIndex + 2] : path.parse(exportKey).base;
 			const exportFileName = Utils.ensureExtension(exportFile);
 
 			console.log("READ", filePath);

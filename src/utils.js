@@ -1,5 +1,6 @@
 //Node imports
 const fs = require("fs");
+const path = require("path");
 
 class _class {
 	static async fsExists(filePath) {
@@ -11,7 +12,8 @@ class _class {
 
 	//Ensure our fileName has a file extension
 	static ensureExtension(fileName) {
-		if (!/\..+$/.test(fileName)) {
+		const extension = path.extname(fileName);
+		if (extension == "") {
 			return `${fileName}.txt`;
 		}
 		return fileName;
