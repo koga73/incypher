@@ -1,28 +1,36 @@
+//Lib imports
 const JSZip = require("jszip");
 
+//Local imports
+const Utils = require("./utils");
+
 class _class {
-	constructor({debug = false}) {
-		this.debug = debug;
+	constructor(config) {
+		this.config = config;
 		this.zip = new JSZip();
 	}
 
 	store(key, value) {
-		if (this.debug) {
-			console.log("zip::store", key, value);
+		if (this.config.debug) {
+			console.info("zip::store", key, value);
 		}
-		this.zip.file(this.ensureExtension(key), value);
+		this.zip.file(Utils.ensureExtension(key), value);
 	}
 
 	retrieve(key, type = "string") {
-		if (this.debug) {
-			console.log("zip::retrieve", key, type);
+		if (this.config.debug) {
+			console.info("zip::retrieve", key, type);
 		}
-		return this.zip.file(this.ensureExtension(key)).async(type);
+		const file = this.zip.file(Utils.ensureExtension(key));
+		if (file) {
+			return file.async(type);
+		}
+		return null;
 	}
 
 	list() {
-		if (this.debug) {
-			console.log("zip::list");
+		if (this.config.debug) {
+			console.info("zip::list");
 		}
 		const entries = [];
 		this.zip.forEach((key, info) => {
@@ -37,31 +45,23 @@ class _class {
 	}
 
 	delete(key) {
-		if (this.debug) {
-			console.log("zip::delete", key);
+		if (this.config.debug) {
+			console.info("zip::delete", key);
 		}
-		return this.zip.remove(this.ensureExtension(key));
+		return this.zip.remove(Utils.ensureExtension(key));
 	}
 
 	setStream(stream) {
-		if (this.debug) {
-			console.log("zip::setStream");
+		if (this.config.debug) {
+			console.info("zip::setStream");
 		}
 		return this.zip.loadAsync(stream);
 	}
 	getStream() {
-		if (this.debug) {
-			console.log("zip::getStream");
+		if (this.config.debug) {
+			console.info("zip::getStream");
 		}
 		return this.zip.generateAsync({type: "nodebuffer"});
-	}
-
-	//Ensure our fileName has a file extension
-	ensureExtension(fileName) {
-		if (!/\..+$/.test(fileName)) {
-			return `${fileName}.txt`;
-		}
-		return fileName;
 	}
 }
 module.exports = _class;
