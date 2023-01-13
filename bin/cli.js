@@ -97,7 +97,7 @@ async function _parseArguments() {
 			zip.store(storeKey, storeVal);
 
 			console.log("WRITE", filePath);
-			await zip.encrypt(await _resolvePass(storePass));
+			await zip.encrypt(await _resolveNewPass(storePass));
 			await zip.save(filePath);
 
 			break;
@@ -178,7 +178,7 @@ async function _parseArguments() {
 			zip.delete(deleteKey);
 
 			console.log("WRITE", filePath);
-			await zip.encrypt(await _resolvePass(deletePass));
+			await zip.encrypt(await _resolveNewPass(deletePass));
 			await zip.save(filePath);
 
 			break;
@@ -202,7 +202,7 @@ async function _parseArguments() {
 			zip.store(importKey, importData);
 
 			console.log("WRITE", filePath);
-			await zip.encrypt(await _resolvePass(importPass));
+			await zip.encrypt(await _resolveNewPass(importPass));
 			await zip.save(filePath);
 
 			break;
@@ -234,7 +234,16 @@ async function _parseArguments() {
 			break;
 
 		case "passwd":
-			console.log("TODO: Change password");
+			console.log("READ", filePath);
+			await zip.load(filePath);
+
+			const passwdPass = await _requestPass(zip);
+			await zip.decrypt(passwdPass);
+
+			console.log("WRITE", filePath);
+			await zip.encrypt(await _resolveNewPass(null));
+			await zip.save(filePath);
+
 			break;
 
 		case "?":
@@ -294,11 +303,16 @@ async function _requestPass(zip) {
 	return await _prompt("Enter the passphrase");
 }
 
-async function _resolvePass(pass) {
+async function _resolveNewPass(pass) {
 	if (pass && pass != "") {
 		return pass;
 	}
-	return await _prompt("Enter the passphrase");
+	const passphrase = await _prompt("Create a passphrase");
+	const confirm = await _prompt("Confirm the passphrase");
+	if (passphrase != confirm) {
+		throw new Error("Passphrase does not match");
+	}
+	return passphrase;
 }
 
 async function _secureErase(filePath) {
