@@ -16,7 +16,7 @@ const CryptoZip = require("../src/crypto-zip");
 const Utils = require("../src/utils");
 
 //File constants
-const DEFAULT_DIR = `${homeDir}/.${packageName}`;
+const DEFAULT_DIR = path.join(homeDir, `.${packageName}`);
 const CONFIG_FILE = path.join(DEFAULT_DIR, `${packageName}-config.json`);
 const CONFIG = {
 	name: packageName,
@@ -135,7 +135,7 @@ async function _parseArguments() {
 			await zip.decrypt(openPass);
 
 			console.log("OPEN", openKey);
-			const openContent = await zip.retrieve(openKey);
+			const openContent = await zip.retrieve(openKey, "uint8array");
 			if (openContent) {
 				await fs.promises.writeFile(openFileName, openContent);
 				childProcess.execSync(openFileName);
@@ -223,7 +223,7 @@ async function _parseArguments() {
 			await zip.decrypt(exportPass);
 
 			console.log("EXPORT", exportKey);
-			const exportContent = await zip.retrieve(exportKey);
+			const exportContent = await zip.retrieve(exportKey, "uint8array");
 			if (exportContent) {
 				await fs.promises.writeFile(exportFileName, exportContent);
 			} else {
@@ -244,6 +244,30 @@ async function _parseArguments() {
 			await zip.encrypt(await _resolveNewPass(null));
 			await zip.save(filePath);
 
+			break;
+
+		case "erase":
+			if (argsLen < 2 + argIndex) {
+				throw new Error("File required");
+			}
+			const eraseFile = args[argIndex + 1];
+
+			await _secureErase(eraseFile);
+
+			break;
+
+		case "nuke":
+			const nukeConfirm = await _prompt(`Type "yes" to erase ${filePath} and ${DEFAULT_DIR}`);
+			if (nukeConfirm == "yes") {
+				if (await Utils.fsExists(filePath)) {
+					await _secureErase(filePath);
+				}
+				if (await Utils.fsExists(DEFAULT_DIR)) {
+					const nukeFiles = await fs.promises.readdir(DEFAULT_DIR);
+					await Promise.all(nukeFiles.map((fileName) => _secureErase(path.join(DEFAULT_DIR, fileName))));
+					await fs.promises.rmdir(DEFAULT_DIR);
+				}
+			}
 			break;
 
 		case "?":
@@ -288,6 +312,10 @@ function _showCommands() {
 	console.log("");
 	console.log("Change password");
 	console.log(`    ${packageName} passwd`);
+	console.log("");
+	console.log("Secure erase");
+	console.log(`    ${packageName} erase ./file.txt`);
+	console.log(`    ${packageName} nuke`);
 }
 
 function _prompt(str) {

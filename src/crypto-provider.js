@@ -6,7 +6,7 @@ class _class {
 	static KEY_LEN = 32; //Bytes (32 * 8 = 256-bit)
 	static TAG_LEN = 16; //Bytes (GCM hash tag)
 	static HASH_ALGORITHM = "sha256";
-	static ENCODING = "utf8";
+	static ENCODING_UTF8 = "utf8";
 
 	//cryptographically secure random number generation
 	static random() {
@@ -43,7 +43,7 @@ class _class {
 	static hash(phrase, optionalRawSalt) {
 		optionalRawSalt = optionalRawSalt || null;
 
-		let toHash = Buffer.from(phrase, this.ENCODING);
+		let toHash = Buffer.from(phrase, this.ENCODING_UTF8);
 		if (optionalRawSalt) {
 			toHash = Buffer.concat([optionalRawSalt, toHash]);
 		}
