@@ -51,8 +51,13 @@ class _class {
 	}
 
 	static randomIV() {
-		return crypto.randomBytes(this.IV_LEN);
+		return _class.randomBytes(this.IV_LEN);
 	}
+
+	static randomBytes(length) {
+		return crypto.randomBytes(length);
+	}
+
 	//GCM MUST NOT REUSE IV WITH SAME KEY
 	//Although GCM key length can be variable, 12-bit is recommended
 	//NIST SP-800-38D: 8.2.1 Deterministic Construction

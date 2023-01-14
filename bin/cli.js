@@ -13,6 +13,7 @@ const readline = require("readline").createInterface({
 //Local imports
 const {name: packageName, version: packageVersion} = require("../package.json");
 const CryptoZip = require("../src/crypto-zip");
+const CryptoProvider = require("../src/crypto-provider");
 const Utils = require("../src/utils");
 
 //File constants
@@ -138,7 +139,11 @@ async function _parseArguments() {
 			const openContent = await zip.retrieve(openKey, "uint8array");
 			if (openContent) {
 				await fs.promises.writeFile(openFileName, openContent);
-				childProcess.execSync(openFileName);
+				try {
+					childProcess.execSync(openFileName);
+				} catch (err) {
+					//Do nothing
+				}
 
 				console.log("ERASE", openFileName);
 				await _secureErase(openFileName);
@@ -252,6 +257,7 @@ async function _parseArguments() {
 			}
 			const eraseFile = args[argIndex + 1];
 
+			console.log("ERASE", eraseFile);
 			await _secureErase(eraseFile);
 
 			break;
@@ -260,11 +266,19 @@ async function _parseArguments() {
 			const nukeConfirm = await _prompt(`Type "yes" to erase ${filePath} and ${DEFAULT_DIR}`);
 			if (nukeConfirm == "yes") {
 				if (await Utils.fsExists(filePath)) {
+					console.log("ERASE", filePath);
 					await _secureErase(filePath);
 				}
 				if (await Utils.fsExists(DEFAULT_DIR)) {
 					const nukeFiles = await fs.promises.readdir(DEFAULT_DIR);
-					await Promise.all(nukeFiles.map((fileName) => _secureErase(path.join(DEFAULT_DIR, fileName))));
+					await Promise.all(
+						nukeFiles.map((fileName) => {
+							const filePath = path.join(DEFAULT_DIR, fileName);
+							console.log("ERASE", filePath);
+							return _secureErase(filePath);
+						})
+					);
+					console.log("DELETE", DEFAULT_DIR);
 					await fs.promises.rmdir(DEFAULT_DIR);
 				}
 			}
@@ -344,7 +358,14 @@ async function _resolveNewPass(pass) {
 }
 
 async function _secureErase(filePath) {
-	console.log("TODO: Secure erase", filePath);
+	const stat = await fs.promises.stat(filePath);
+	if (stat.isDirectory()) {
+		throw new Error("Secure erasure of directories is not supported");
+	}
+	if (!stat.size) {
+		return;
+	}
+	await fs.promises.writeFile(filePath, CryptoProvider.randomBytes(stat.size));
 	await fs.promises.rm(filePath);
 }
 
