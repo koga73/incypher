@@ -1,0 +1,4 @@
+_archive/
+_artifacts/
+build/
+node_modules
