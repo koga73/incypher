@@ -18,5 +18,24 @@
 	"devDependencies": {
 		"@angablue/exe": "^1.2.0",
 		"rimraf": "^4.0.5"
-	}
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/koga73/incypher.git"
+	},
+	"keywords": [
+		"crypto",
+		"seed",
+		"pass",
+		"encrypt",
+		"decrypt",
+		"archive",
+		"zip",
+		"secure",
+		"store"
+	],
+	"bugs": {
+		"url": "https://github.com/koga73/incypher/issues"
+	},
+	"homepage": "https://github.com/koga73/incypher#readme"
 }
