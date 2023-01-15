@@ -5,7 +5,8 @@ const fs = require("fs");
 const path = require("path");
 const childProcess = require("child_process");
 const homeDir = require("os").homedir();
-const readline = require("readline").createInterface({
+const readline = require("readline");
+const rl = readline.createInterface({
 	input: process.stdin,
 	output: process.stdout
 });
@@ -332,25 +333,41 @@ function _showCommands() {
 	console.log(`    ${packageName} nuke`);
 }
 
-function _prompt(str) {
+function _prompt(str, hidden) {
+	if (hidden) {
+		rl.input.on("keypress", _handler_readline_keypress);
+	}
 	return new Promise((resolve, reject) => {
-		readline.question(`\n${str}\n> `, resolve);
+		rl.question(`\n${str}\n> `, (input) => {
+			if (hidden) {
+				rl.input.off("keypress", _handler_readline_keypress);
+			}
+			resolve(input);
+		});
 	});
+}
+
+//https://stackoverflow.com/a/59727173/3610169
+function _handler_readline_keypress(c, k) {
+	let len = rl.line.length;
+	readline.moveCursor(rl.output, -len, 0);
+	readline.clearLine(rl.output, 1);
+	rl.output.write("*".repeat(len));
 }
 
 async function _requestPass(zip) {
 	if (!zip.isEncrypted) {
 		return "";
 	}
-	return await _prompt("Enter the passphrase");
+	return await _prompt("Enter the passphrase", true);
 }
 
 async function _resolveNewPass(pass) {
 	if (pass && pass != "") {
 		return pass;
 	}
-	const passphrase = await _prompt("Create a passphrase");
-	const confirm = await _prompt("Confirm the passphrase");
+	const passphrase = await _prompt("Create a passphrase", true);
+	const confirm = await _prompt("Confirm the passphrase", true);
 	if (passphrase != confirm) {
 		throw new Error("Passphrase does not match");
 	}
@@ -385,7 +402,7 @@ async function _secureErase(filePath) {
 		}
 		result = 1;
 	} finally {
-		readline.close();
+		rl.close();
 		console.log("");
 		process.exit(result);
 	}

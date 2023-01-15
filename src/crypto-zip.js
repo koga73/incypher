@@ -13,7 +13,8 @@ const {name: packageName, version: packageVersion, author: packageAuthor} = requ
 //Header data constants
 const FILE_MESSAGE = `encrypted with ${packageName} ${Utils.getFixedVersion(packageVersion)} \n`;
 const INCREMENTAL_BUFFER_LEN = 4;
-const HEADER_SIZE = FILE_MESSAGE.length + CryptoProvider.IV_LEN + INCREMENTAL_BUFFER_LEN;
+const SALT_BUFFER_LEN = 8;
+const HEADER_SIZE = FILE_MESSAGE.length + CryptoProvider.IV_LEN + INCREMENTAL_BUFFER_LEN + SALT_BUFFER_LEN;
 
 //https://regex101.com/r/ajzODa/1
 const FILE_MESSAGE_REGEX = /^(.+?)\d+.*$/;
@@ -67,11 +68,11 @@ class _class extends Zip {
 		} else if (!(passphrase && passphrase != "")) {
 			throw new Error(`Could not decrypt - passphrase required`);
 		}
-		const {startIV, incremental} = _parseHeader(content.subarray(0, HEADER_SIZE));
+		const {startIV, incremental, salt} = _parseHeader(content.subarray(0, HEADER_SIZE));
 		const ciphertext = content.subarray(HEADER_SIZE);
 		const fixed = CryptoProvider.deterministic32BitVal(packageAuthor);
 		const deterministicIV = CryptoProvider.deterministicIV(startIV, fixed, incremental);
-		const key = CryptoProvider.hash(passphrase, Buffer.from(packageName, CryptoProvider.ENCODING));
+		const key = CryptoProvider.hash(passphrase, salt);
 		try {
 			const plaintext = CryptoProvider.decrypt(deterministicIV, key, ciphertext);
 			this.currentIncrement = incremental;
@@ -106,10 +107,11 @@ class _class extends Zip {
 		const fixed = CryptoProvider.deterministic32BitVal(packageAuthor);
 		const incremental = this.currentIncrement + 1;
 		const deterministicIV = CryptoProvider.deterministicIV(startIV, fixed, incremental);
-		const key = CryptoProvider.hash(passphrase, Buffer.from(packageName, CryptoProvider.ENCODING));
+		const salt = CryptoProvider.randomBytes(SALT_BUFFER_LEN);
+		const key = CryptoProvider.hash(passphrase, salt);
 		try {
 			const ciphertext = CryptoProvider.encrypt(deterministicIV, key, stream);
-			this.content = Buffer.concat([_generateHeader(startIV, incremental), ciphertext]);
+			this.content = Buffer.concat([_generateHeader(startIV, incremental, salt), ciphertext]);
 		} catch (err) {
 			throw new Error(`Could not encrypt - ${err.message}`);
 		}
@@ -126,10 +128,10 @@ function _isEncrypted(content) {
 	return FILE_MESSAGE.replace(FILE_MESSAGE_REGEX, "$1") == fileMessage.replace(FILE_MESSAGE_REGEX, "$1");
 }
 
-function _generateHeader(startIV, incremental) {
+function _generateHeader(startIV, incremental, salt) {
 	const incrementalBuffer = Buffer.alloc(INCREMENTAL_BUFFER_LEN);
 	incrementalBuffer.writeUint32BE(incremental);
-	return Buffer.concat([Buffer.from(FILE_MESSAGE, CryptoProvider.ENCODING), startIV, incrementalBuffer]);
+	return Buffer.concat([Buffer.from(FILE_MESSAGE, CryptoProvider.ENCODING), startIV, incrementalBuffer, salt]);
 }
 
 function _parseHeader(header) {
@@ -137,6 +139,7 @@ function _parseHeader(header) {
 	return {
 		fileMessage: header.subarray(0, FILE_MESSAGE.length),
 		startIV: header.subarray(FILE_MESSAGE.length, FILE_MESSAGE.length + CryptoProvider.IV_LEN),
-		incremental: parseInt(incrementalBuffer.toString("hex"), 16)
+		incremental: parseInt(incrementalBuffer.toString("hex"), 16),
+		salt: header.subarray(FILE_MESSAGE.length + CryptoProvider.IV_LEN + INCREMENTAL_BUFFER_LEN, HEADER_SIZE)
 	};
 }
