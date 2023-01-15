@@ -1,1 +1,4 @@
 *.exe filter=lfs diff=lfs merge=lfs -text
+incypher-macos filter=lfs diff=lfs merge=lfs -text
+incypher-linux filter=lfs diff=lfs merge=lfs -text
+incypher-win.exe filter=lfs diff=lfs merge=lfs -text
