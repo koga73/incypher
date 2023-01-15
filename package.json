@@ -1,0 +1,22 @@
+{
+	"name": "incypher",
+	"version": "0.5.0",
+	"description": "A secure archiver intended to store crypto keys and seed phrases",
+	"bin": {
+		"incypher": "bin/cli.js"
+	},
+	"scripts": {
+		"clean": "rimraf ./build",
+		"build": "pkg . --out-path ./build && node build-win.js",
+		"cli": "node ./bin/cli.js"
+	},
+	"author": "AJ Savino",
+	"license": "GPL-3.0",
+	"dependencies": {
+		"jszip": "^3.10.1"
+	},
+	"devDependencies": {
+		"@angablue/exe": "^1.2.0",
+		"rimraf": "^4.0.5"
+	}
+}

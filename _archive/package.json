@@ -1,0 +1,35 @@
+{
+	"name": "incypher",
+	"version": "1.0.0",
+	"description": "Encryption technologies",
+	"main": "dist/BrowserCryptoProvider.js",
+	"module": "dist/NodeCryptoProvider.js",
+	"scripts": {
+		"build": "npx babel ./src/BrowserCryptoProvider.js -o ./dist/BrowserCryptoProvider.js",
+		"test": "mocha tests/test.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/koga73/incypher.git"
+	},
+	"keywords": [
+		"encrypt",
+		"decrypt",
+		"aes"
+	],
+	"author": "AJ Savino",
+	"license": "UNLICENSED",
+	"bugs": {
+		"url": "https://github.com/koga73/incypher/issues"
+	},
+	"homepage": "https://github.com/koga73/incypher#readme",
+	"devDependencies": {
+		"@babel/cli": "^7.10.5",
+		"@babel/core": "^7.11.4",
+		"@babel/plugin-proposal-class-properties": "^7.10.4",
+		"@babel/plugin-transform-modules-umd": "^7.10.4",
+		"@babel/preset-env": "^7.11.0",
+		"chai": "^4.2.0",
+		"mocha": "^8.1.1"
+	}
+}
