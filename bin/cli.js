@@ -329,7 +329,7 @@ function _showCommands() {
 	console.log(`    ${packageName} passwd`);
 	console.log("");
 	console.log("Secure erase");
-	console.log(`    ${packageName} erase ./file.txt`);
+	console.log(`    ${packageName} erase ./${EXAMPLE_NAME}.txt`);
 	console.log(`    ${packageName} nuke`);
 }
 
