@@ -26,6 +26,7 @@ class _class {
 		const encrypted = Buffer.concat([ciphertext, tag]);
 		return encrypted;
 	}
+
 	static decrypt(iv, key, ciphertext) {
 		if (iv.byteLength != this.IV_LEN) {
 			throw new Error("invalid iv length");
@@ -40,14 +41,28 @@ class _class {
 		return decrypted;
 	}
 
-	static hash(phrase, optionalRawSalt) {
-		optionalRawSalt = optionalRawSalt || null;
-
-		let toHash = Buffer.from(phrase, this.ENCODING_UTF8);
-		if (optionalRawSalt) {
-			toHash = Buffer.concat([optionalRawSalt, toHash]);
+	static hash(input, salt = null, algorithm = this.HASH_ALGORITHM) {
+		if (isString(input)) {
+			input = Buffer.from(input, this.ENCODING_UTF8);
 		}
-		return new Uint8Array(crypto.createHash(this.HASH_ALGORITHM).update(toHash).digest().buffer);
+		if (isString(salt)) {
+			salt = Buffer.from(salt, this.ENCODING_UTF8);
+		}
+		let toHash = input;
+		if (salt) {
+			toHash = Buffer.concat([input, salt]);
+		}
+		return new Uint8Array(crypto.createHash(algorithm).update(toHash).digest().buffer);
+	}
+
+	//NIST SP 800-132 recommends the salt is at least 16-bytes long
+	static hashPass(pass, salt, length = this.KEY_LEN) {
+		return new Promise((resolve, reject) => {
+			crypto.scrypt(pass, salt, length, (err, derivedKey) => {
+				if (err) reject(err);
+				resolve(derivedKey);
+			});
+		});
 	}
 
 	static randomIV() {
@@ -89,8 +104,8 @@ class _class {
 	//Hash the input and turn the first 4 bytes into a 32-bit number
 	//This doesn"t need to be super unique as this value will get XOR"d with randomBytes
 	//The output of this should be passed into deterministicIV "fixed" param
-	static deterministic32BitVal(phrase) {
-		const hash = this.hash(phrase);
+	static deterministic32BitVal(input) {
+		const hash = this.hash(input);
 		let fixedVal = 0;
 		fixedVal |= hash[0] << 0;
 		fixedVal |= hash[1] << 8;
@@ -100,3 +115,7 @@ class _class {
 	}
 }
 module.exports = _class;
+
+function isString(str) {
+	return typeof str === typeof "";
+}
