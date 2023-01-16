@@ -11,7 +11,7 @@ const build = exe({
 	properties: {
 		FileDescription: packageDescription,
 		ProductName: packageName.substring(0, 1).toUpperCase() + packageName.substring(1, packageName.length),
-		LegalCopyright: `${packageAuthor} | ${year}`,
+		LegalCopyright: `${packageAuthor.name} | ${year}`,
 		OriginalFilename: `${packageName}.exe`
 	}
 });
