@@ -12,8 +12,8 @@ const {name: packageName, version: packageVersion, author: packageAuthor} = requ
 
 //Header data constants
 const FILE_MESSAGE = `encrypted with ${packageName} ${Utils.getFixedVersion(packageVersion)} \n`;
-const INCREMENTAL_BUFFER_LEN = 4;
-const SALT_BUFFER_LEN = 8;
+const INCREMENTAL_BUFFER_LEN = 4; //Bytes
+const SALT_BUFFER_LEN = 16; //Bytes
 const HEADER_SIZE = FILE_MESSAGE.length + CryptoProvider.IV_LEN + INCREMENTAL_BUFFER_LEN + SALT_BUFFER_LEN;
 
 //https://regex101.com/r/ajzODa/1
@@ -59,7 +59,6 @@ class _class extends Zip {
 		}
 		const content = this.content;
 		if (!(content && content.length)) {
-			//await this.setStream("");
 			return;
 		}
 		if (!this.isEncrypted) {
@@ -72,7 +71,7 @@ class _class extends Zip {
 		const ciphertext = content.subarray(HEADER_SIZE);
 		const fixed = CryptoProvider.deterministic32BitVal(packageAuthor);
 		const deterministicIV = CryptoProvider.deterministicIV(startIV, fixed, incremental);
-		const key = CryptoProvider.hash(passphrase, salt);
+		const key = await CryptoProvider.hashPass(passphrase, salt);
 		try {
 			const plaintext = CryptoProvider.decrypt(deterministicIV, key, ciphertext);
 			this.currentIncrement = incremental;
@@ -83,13 +82,14 @@ class _class extends Zip {
 	}
 
 	//Encrypts file with passphrase
-	//A starting IV (Initialization Vector) is chosen at random and is written to the file
-	//currentIncrement value starts at random (0-65535) and increments once each time we save and is written to file
-	//A deterministic IV is constructed via the starting IV, a fixed value and the incremental value
+	//A 12-byte initial IV (Initialization Vector) is generated via a cryptographically secure random bytes generator and is written to the file header
+	//A 32-bit currentIncrement value starts at random (0-65535) and increments once each time we encrypt and is written to the file header
+	//A deterministic IV is constructed via the starting IV, a fixed value and the currentIncrement value
 	//The deterministic IV function follows NIST SP-800-38D: 8.2.1 Deterministic Construction
 	//This ensures that we do not reuse the same IV and it cannot be predicted per AES-GCM specifications
-	//The salt is appended to the passphrase and then hashed via sha-256
-	//THe outputing ciphertext includes the GCM tag at the end of the data to verify its integrity
+	//A 16-byte random salt is generated via a cryptographically secure random bytes generator and is written to the file header
+	//The random salt is then combined with the user passphrase and hashed via scrypt to generate the 256-bit encryption key
+	//Encryption takes place using AES-256-GCM and the GCM integrity tag is appended to the end of the ciphertext
 	async encrypt(passphrase) {
 		if (this.config.debug) {
 			console.info("crypto-zip::encrypt");
@@ -108,7 +108,7 @@ class _class extends Zip {
 		const incremental = this.currentIncrement + 1;
 		const deterministicIV = CryptoProvider.deterministicIV(startIV, fixed, incremental);
 		const salt = CryptoProvider.randomBytes(SALT_BUFFER_LEN);
-		const key = CryptoProvider.hash(passphrase, salt);
+		const key = await CryptoProvider.hashPass(passphrase, salt);
 		try {
 			const ciphertext = CryptoProvider.encrypt(deterministicIV, key, stream);
 			this.content = Buffer.concat([_generateHeader(startIV, incremental, salt), ciphertext]);
