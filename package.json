@@ -1,6 +1,6 @@
 {
 	"name": "incypher",
-	"version": "0.6.0",
+	"version": "0.6.1",
 	"description": "A secure archiver intended to store crypto keys and seed phrases",
 	"bin": {
 		"incypher": "bin/cli.js"
@@ -10,7 +10,9 @@
 		"build": "pkg . --out-path ./build && node build-win.js",
 		"cli": "node ./bin/cli.js"
 	},
-	"author": "AJ Savino",
+	"author": {
+		"name": "AJ Savino"
+	},
 	"license": "GPL-3.0",
 	"dependencies": {
 		"jszip": "^3.10.1"

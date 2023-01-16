@@ -69,7 +69,7 @@ class _class extends Zip {
 		}
 		const {startIV, incremental, salt} = _parseHeader(content.subarray(0, HEADER_SIZE));
 		const ciphertext = content.subarray(HEADER_SIZE);
-		const fixed = CryptoProvider.deterministic32BitVal(packageAuthor);
+		const fixed = CryptoProvider.deterministic32BitVal(packageAuthor.name);
 		const deterministicIV = CryptoProvider.deterministicIV(startIV, fixed, incremental);
 		const key = await CryptoProvider.hashPass(passphrase, salt);
 		try {
@@ -104,7 +104,7 @@ class _class extends Zip {
 			return;
 		}
 		const startIV = CryptoProvider.randomIV();
-		const fixed = CryptoProvider.deterministic32BitVal(packageAuthor);
+		const fixed = CryptoProvider.deterministic32BitVal(packageAuthor.name);
 		const incremental = this.currentIncrement + 1;
 		const deterministicIV = CryptoProvider.deterministicIV(startIV, fixed, incremental);
 		const salt = CryptoProvider.randomBytes(SALT_BUFFER_LEN);
