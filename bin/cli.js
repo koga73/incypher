@@ -287,8 +287,43 @@ async function _parseArguments() {
 
 		case "?":
 		case "help":
-		default:
 			_showCommands();
+			break;
+
+		default:
+			//Import file(s)
+			if (await Utils.fsExists(args[argIndex])) {
+				console.log("READ", filePath);
+				await zip.load(filePath);
+
+				const defaultImportPass = await _requestPass(zip);
+				await zip.decrypt(defaultImportPass);
+
+				for (let i = 0; i < argsLen; i++) {
+					const defaultImportFile = args[argIndex + i];
+					if (await Utils.fsExists(defaultImportFile)) {
+						const stat = await fs.promises.stat(defaultImportFile);
+						if (stat.isDirectory()) {
+							console.warn("WARN: Import of directories is not supported");
+						} else {
+							const defaultImportKey = path.parse(defaultImportFile).base;
+							const defaultImportData = await fs.promises.readFile(defaultImportFile);
+
+							console.log("IMPORT", defaultImportKey);
+							zip.store(defaultImportKey, defaultImportData);
+						}
+					}
+				}
+
+				console.log("WRITE", filePath);
+				await zip.encrypt(await _resolveNewPass(defaultImportPass));
+				await zip.save(filePath);
+
+				await _prompt("Press enter to exit");
+			} else {
+				_showCommands();
+				await _prompt("Run this program from the command line\nPress enter to exit");
+			}
 			break;
 	}
 
