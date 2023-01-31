@@ -34,7 +34,10 @@
 		"archive",
 		"zip",
 		"secure",
-		"store"
+		"store",
+		"rclone",
+		"cloud",
+		"sync"
 	],
 	"bugs": {
 		"url": "https://github.com/koga73/incypher/issues"

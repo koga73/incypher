@@ -4,7 +4,7 @@
 const {promises: fs, constants: fs_constants} = require("fs");
 const path = require("path");
 const childProcess = require("child_process");
-const homeDir = require("os").homedir();
+const homeDir = process.env["INCYPHER_HOME"] || require("os").homedir();
 const readline = require("readline");
 const rl = readline.createInterface({
 	input: process.stdin,
@@ -12,7 +12,7 @@ const rl = readline.createInterface({
 });
 
 //Local imports
-const {name: packageName, version: packageVersion} = require("../package.json");
+const {name: packageName, version: packageVersion, author: packageAuthor} = require("../package.json");
 const CryptoZip = require("../src/crypto-zip");
 const CryptoProvider = require("../src/crypto-provider");
 const Utils = require("../src/utils");
@@ -22,10 +22,17 @@ const DEFAULT_DIR = path.join(homeDir, `.${packageName}`);
 const CONFIG_FILE = path.join(DEFAULT_DIR, `${packageName}-config.json`);
 const CONFIG = {
 	name: packageName,
+	author: packageAuthor,
 	version: packageVersion,
 	debug: false,
+	backup: true,
 	store: path.join(DEFAULT_DIR, `store.${packageName}`),
-	backup: true
+	sync: {
+		enabled: false,
+		init: `rclone mkdir remote:${packageName}`,
+		upload: `rclone copy "${DEFAULT_DIR}" remote:${packageName} --include "*.${packageName}" -v --progress`,
+		download: `rclone copy remote:${packageName} "${DEFAULT_DIR}" --include "*.${packageName}" -v --progress`
+	}
 };
 
 //Misc constants
@@ -69,6 +76,18 @@ async function _initialize() {
 	if (isFileAccessible) {
 		throw new Error(`${config.store} is not accessible`);
 	}
+
+	//Check sync access
+	if (config.sync.enabled) {
+		if (config.debug) {
+			console.log("SYNC ENABLED");
+		}
+		try {
+			childProcess.execSync(config.sync.init);
+		} catch (err) {
+			throw new Error("Sync init command failed");
+		}
+	}
 }
 
 async function _parseArguments() {
@@ -89,18 +108,10 @@ async function _parseArguments() {
 			const storeKey = args[argIndex + 1];
 			const storeVal = await _prompt(`Please enter the value for "${storeKey}"`);
 
-			console.log("READ", filePath);
-			await zip.load(filePath);
-
-			const storePass = await _requestPass(zip);
-			await zip.decrypt(storePass);
-
+			const storePass = await _readStore(filePath, zip);
 			console.log("STORE", storeKey);
 			zip.store(storeKey, storeVal);
-
-			console.log("WRITE", filePath);
-			await zip.encrypt(await _resolveNewPass(storePass));
-			await zip.save(filePath);
+			await _writeStore(filePath, zip, storePass);
 
 			break;
 
@@ -110,12 +121,7 @@ async function _parseArguments() {
 			}
 			const viewKey = args[argIndex + 1];
 
-			console.log("READ", filePath);
-			await zip.load(filePath);
-
-			const viewPass = await _requestPass(zip);
-			await zip.decrypt(viewPass);
-
+			await _readStore(filePath, zip);
 			console.log("VIEW", viewKey);
 			console.log("");
 			console.log("   ", await zip.retrieve(viewKey));
@@ -130,22 +136,12 @@ async function _parseArguments() {
 			const openFile = path.parse(openKey).base;
 			const openFileName = path.join(DEFAULT_DIR, Utils.ensureExtension(openFile));
 
-			console.log("READ", filePath);
-			await zip.load(filePath);
-
-			const openPass = await _requestPass(zip);
-			await zip.decrypt(openPass);
-
+			await _readStore(filePath, zip);
 			console.log("OPEN", openKey);
 			const openContent = await zip.retrieve(openKey, "uint8array");
 			if (openContent) {
 				await fs.writeFile(openFileName, openContent);
-				try {
-					childProcess.execSync(openFileName);
-				} catch (err) {
-					//Do nothing
-				}
-
+				childProcess.execSync(openFileName);
 				console.log("ERASE", openFileName);
 				await _secureErase(openFileName);
 			} else {
@@ -156,12 +152,7 @@ async function _parseArguments() {
 			break;
 
 		case "list":
-			console.log("READ", filePath);
-			await zip.load(filePath);
-
-			const listPass = await _requestPass(zip);
-			await zip.decrypt(listPass);
-
+			await _readStore(filePath, zip);
 			console.log("LIST");
 			console.log("");
 			zip.list().map((entry) => console.log("   ", entry));
@@ -174,18 +165,10 @@ async function _parseArguments() {
 			}
 			const deleteKey = args[argIndex + 1];
 
-			console.log("READ", filePath);
-			await zip.load(filePath);
-
-			const deletePass = await _requestPass(zip);
-			await zip.decrypt(deletePass);
-
+			const deletePass = await _readStore(filePath, zip);
 			console.log("DELETE", deleteKey);
 			zip.delete(deleteKey);
-
-			console.log("WRITE", filePath);
-			await zip.encrypt(await _resolveNewPass(deletePass));
-			await zip.save(filePath);
+			await _writeStore(filePath, zip, deletePass);
 
 			break;
 
@@ -198,18 +181,10 @@ async function _parseArguments() {
 			const importKey = argsLen > importNumArgs ? args[argIndex + 2] : path.parse(importFile).base;
 			const importData = await fs.readFile(importFile);
 
-			console.log("READ", filePath);
-			await zip.load(filePath);
-
-			const importPass = await _requestPass(zip);
-			await zip.decrypt(importPass);
-
+			const importPass = await _readStore(filePath, zip);
 			console.log("IMPORT", importKey);
 			zip.store(importKey, importData);
-
-			console.log("WRITE", filePath);
-			await zip.encrypt(await _resolveNewPass(importPass));
-			await zip.save(filePath);
+			await _writeStore(filePath, zip, importPass);
 
 			break;
 
@@ -222,12 +197,7 @@ async function _parseArguments() {
 			const exportFile = argsLen > exportNumArgs ? args[argIndex + 2] : path.parse(exportKey).base;
 			const exportFileName = Utils.ensureExtension(exportFile);
 
-			console.log("READ", filePath);
-			await zip.load(filePath);
-
-			const exportPass = await _requestPass(zip);
-			await zip.decrypt(exportPass);
-
+			await _readStore(filePath, zip);
 			console.log("EXPORT", exportKey);
 			const exportContent = await zip.retrieve(exportKey, "uint8array");
 			if (exportContent) {
@@ -240,15 +210,8 @@ async function _parseArguments() {
 			break;
 
 		case "passwd":
-			console.log("READ", filePath);
-			await zip.load(filePath);
-
-			const passwdPass = await _requestPass(zip);
-			await zip.decrypt(passwdPass);
-
-			console.log("WRITE", filePath);
-			await zip.encrypt(await _resolveNewPass(null));
-			await zip.save(filePath);
+			await _readStore(filePath, zip);
+			await _writeStore(filePath, zip, null);
 
 			break;
 
@@ -287,12 +250,7 @@ async function _parseArguments() {
 
 		case "config":
 			console.log("OPEN", CONFIG_FILE);
-			try {
-				childProcess.execSync(CONFIG_FILE);
-			} catch (err) {
-				//Do nothing
-			}
-
+			childProcess.execSync(CONFIG_FILE);
 			break;
 
 		case "?":
@@ -303,12 +261,7 @@ async function _parseArguments() {
 		default:
 			//Import file(s)
 			if (await Utils.fsExists(args[argIndex])) {
-				console.log("READ", filePath);
-				await zip.load(filePath);
-
-				const defaultImportPass = await _requestPass(zip);
-				await zip.decrypt(defaultImportPass);
-
+				const defaultImportPass = await _readStore(filePath, zip);
 				for (let i = 0; i < argsLen; i++) {
 					const defaultImportFile = args[argIndex + i];
 					if (await Utils.fsExists(defaultImportFile)) {
@@ -324,11 +277,7 @@ async function _parseArguments() {
 						}
 					}
 				}
-
-				console.log("WRITE", filePath);
-				await zip.encrypt(await _resolveNewPass(defaultImportPass));
-				await zip.save(filePath);
-
+				await _writeStore(filePath, zip, defaultImportPass);
 				await _prompt("Press enter to exit");
 			} else {
 				_showCommands();
@@ -410,14 +359,17 @@ async function _requestPass(zip) {
 	return await _prompt("Enter the passphrase", true);
 }
 
-async function _resolveNewPass(pass) {
-	if (pass && pass != "") {
+async function _resolvePass(pass) {
+	if (pass != null) {
 		return pass;
 	}
 	const passphrase = await _prompt("Create a passphrase", true);
 	const confirm = await _prompt("Confirm the passphrase", true);
 	if (passphrase != confirm) {
 		throw new Error("Passphrase does not match");
+	}
+	if (passphrase == "") {
+		console.warn("WARN: Empty password specified - the data store will not be encrypted!");
 	}
 	return passphrase;
 }
@@ -432,6 +384,47 @@ async function _secureErase(filePath) {
 	}
 	await fs.writeFile(filePath, CryptoProvider.randomBytes(stat.size));
 	await fs.rm(filePath);
+}
+
+async function _readStore(filePath, zip) {
+	if (config.sync.enabled) {
+		console.log("SYNC DOWNLOAD");
+		if (config.debug) {
+			console.log(config.sync.download);
+		}
+		try {
+			childProcess.execSync(config.sync.download);
+		} catch (err) {
+			throw new Error("Sync download command failed");
+		}
+	}
+
+	console.log("READ", filePath);
+	const success = await zip.load(filePath);
+
+	const pass = success ? await _requestPass(zip) : null;
+	await zip.decrypt(pass);
+
+	return pass;
+}
+
+async function _writeStore(filePath, zip, pass) {
+	await zip.encrypt(await _resolvePass(pass));
+
+	console.log("WRITE", filePath);
+	await zip.save(filePath);
+
+	if (config.sync.enabled) {
+		console.log("SYNC UPLOAD");
+		if (config.debug) {
+			console.log(config.sync.upload);
+		}
+		try {
+			childProcess.execSync(config.sync.upload);
+		} catch (err) {
+			throw new Error("Sync upload command failed");
+		}
+	}
 }
 
 (async function execute() {

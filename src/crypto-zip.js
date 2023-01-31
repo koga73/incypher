@@ -34,11 +34,12 @@ class _class extends Zip {
 			console.info("crypto-zip::load", filePath);
 		}
 		if (!(await Utils.fsExists(filePath))) {
-			return;
+			return false;
 		}
 		const content = await fs.readFile(filePath);
 		this.isEncrypted = _isEncrypted(content);
 		this.content = content;
+		return true;
 	}
 
 	async save(filePath) {
