@@ -1,10 +1,10 @@
 //Node imports
-const fs = require("fs");
+const {promises: fs} = require("fs");
 const path = require("path");
 
 class _class {
 	static async fsExists(filePath) {
-		return await fs.promises
+		return await fs
 			.stat(filePath)
 			.then(() => true)
 			.catch(() => false);

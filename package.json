@@ -1,6 +1,6 @@
 {
 	"name": "incypher",
-	"version": "0.6.1",
+	"version": "0.7.0",
 	"description": "A secure archiver intended to store crypto keys and seed phrases",
 	"bin": {
 		"incypher": "bin/cli.js"

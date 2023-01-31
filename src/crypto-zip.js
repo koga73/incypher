@@ -1,5 +1,5 @@
 //Node imports
-const fs = require("fs");
+const {promises: fs} = require("fs");
 const path = require("path");
 
 //Node imports
@@ -12,12 +12,13 @@ const {name: packageName, version: packageVersion, author: packageAuthor} = requ
 
 //Header data constants
 const FILE_MESSAGE = `encrypted with ${packageName} ${Utils.getFixedVersion(packageVersion)} \n`;
+
 const INCREMENTAL_BUFFER_LEN = 4; //Bytes
 const SALT_BUFFER_LEN = 16; //Bytes
 const HEADER_SIZE = FILE_MESSAGE.length + CryptoProvider.IV_LEN + INCREMENTAL_BUFFER_LEN + SALT_BUFFER_LEN;
 
-//https://regex101.com/r/ajzODa/1
-const FILE_MESSAGE_REGEX = /^(.+?)\d+.*$/;
+//https://regex101.com/r/ajzODa/2
+const FILE_MESSAGE_REGEX = /^(.+?)\d+[\s\S]*$/;
 
 class _class extends Zip {
 	constructor(config) {
@@ -35,7 +36,7 @@ class _class extends Zip {
 		if (!(await Utils.fsExists(filePath))) {
 			return;
 		}
-		const content = await fs.promises.readFile(filePath);
+		const content = await fs.readFile(filePath);
 		this.isEncrypted = _isEncrypted(content);
 		this.content = content;
 	}
@@ -45,11 +46,11 @@ class _class extends Zip {
 			console.info("crypto-zip::save", filePath);
 		}
 		const content = this.content;
-		await fs.promises.writeFile(filePath, content);
+		await fs.writeFile(filePath, content);
 		if (this.config.backup) {
 			const now = new Date();
 			const timestamp = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}_at_${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
-			await fs.promises.writeFile(path.join(this.config.defaultDir, `store-backup_${timestamp}.${packageName}`), content);
+			await fs.writeFile(path.join(this.config.defaultDir, `store-backup_${timestamp}.${packageName}`), content);
 		}
 	}
 

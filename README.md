@@ -98,6 +98,12 @@ incypher erase ./ravencoin.txt
 incypher nuke
 ```
 
+##### Edit config
+
+```
+incypher config
+```
+
 ### Notes
 - You can optionally you can drag-and-drop file(s) on the executable to import them directly
 

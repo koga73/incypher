@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 //Node imports
-const fs = require("fs");
+const {promises: fs, constants: fs_constants} = require("fs");
 const path = require("path");
 const childProcess = require("child_process");
 const homeDir = require("os").homedir();
@@ -40,32 +40,32 @@ var config = CONFIG;
 
 async function _initialize() {
 	//Check home directory access
-	const isHomeDirAccessible = await fs.promises.access(homeDir, fs.constants.R_OK | fs.constants.W_OK);
+	const isHomeDirAccessible = await fs.access(homeDir, fs_constants.R_OK | fs_constants.W_OK);
 	if (isHomeDirAccessible) {
 		throw new Error(`${homeDir} is not accessible`);
 	}
 
 	//Create directory if needed
 	if (!(await Utils.fsExists(DEFAULT_DIR))) {
-		await fs.promises.mkdir(DEFAULT_DIR);
+		await fs.mkdir(DEFAULT_DIR);
 		console.log("MKDIR", DEFAULT_DIR);
 	}
 	//Create config if needed
 	if (!(await Utils.fsExists(CONFIG_FILE))) {
-		const fileStore = await _prompt(`File store (leave empty for default: ${CONFIG.store})`);
+		const fileStore = ""; //await _prompt(`File store (leave empty for default: ${CONFIG.store})`);
 		const configData = {
 			store: fileStore != "" ? fileStore : CONFIG.FILE_STORE,
 			...CONFIG
 		};
 		console.log("WRITE", CONFIG_FILE);
-		await fs.promises.writeFile(CONFIG_FILE, JSON.stringify(configData, null, 4));
+		await fs.writeFile(CONFIG_FILE, JSON.stringify(configData, null, 4));
 	}
 
 	//Read config
-	config = JSON.parse(await fs.promises.readFile(CONFIG_FILE));
+	config = JSON.parse(await fs.readFile(CONFIG_FILE));
 
 	//Check file access
-	const isFileAccessible = await fs.promises.access(path.dirname(config.store), fs.constants.R_OK | fs.constants.W_OK);
+	const isFileAccessible = await fs.access(path.dirname(config.store), fs_constants.R_OK | fs_constants.W_OK);
 	if (isFileAccessible) {
 		throw new Error(`${config.store} is not accessible`);
 	}
@@ -139,7 +139,7 @@ async function _parseArguments() {
 			console.log("OPEN", openKey);
 			const openContent = await zip.retrieve(openKey, "uint8array");
 			if (openContent) {
-				await fs.promises.writeFile(openFileName, openContent);
+				await fs.writeFile(openFileName, openContent);
 				try {
 					childProcess.execSync(openFileName);
 				} catch (err) {
@@ -196,7 +196,7 @@ async function _parseArguments() {
 			}
 			const importFile = args[argIndex + 1];
 			const importKey = argsLen > importNumArgs ? args[argIndex + 2] : path.parse(importFile).base;
-			const importData = await fs.promises.readFile(importFile);
+			const importData = await fs.readFile(importFile);
 
 			console.log("READ", filePath);
 			await zip.load(filePath);
@@ -231,7 +231,7 @@ async function _parseArguments() {
 			console.log("EXPORT", exportKey);
 			const exportContent = await zip.retrieve(exportKey, "uint8array");
 			if (exportContent) {
-				await fs.promises.writeFile(exportFileName, exportContent);
+				await fs.writeFile(exportFileName, exportContent);
 			} else {
 				console.log("");
 				console.log("   ", `${exportKey} not found`);
@@ -271,7 +271,7 @@ async function _parseArguments() {
 					await _secureErase(filePath);
 				}
 				if (await Utils.fsExists(DEFAULT_DIR)) {
-					const nukeFiles = await fs.promises.readdir(DEFAULT_DIR);
+					const nukeFiles = await fs.readdir(DEFAULT_DIR);
 					await Promise.all(
 						nukeFiles.map((fileName) => {
 							const filePath = path.join(DEFAULT_DIR, fileName);
@@ -280,9 +280,19 @@ async function _parseArguments() {
 						})
 					);
 					console.log("DELETE", DEFAULT_DIR);
-					await fs.promises.rmdir(DEFAULT_DIR);
+					await fs.rmdir(DEFAULT_DIR);
 				}
 			}
+			break;
+
+		case "config":
+			console.log("OPEN", CONFIG_FILE);
+			try {
+				childProcess.execSync(CONFIG_FILE);
+			} catch (err) {
+				//Do nothing
+			}
+
 			break;
 
 		case "?":
@@ -302,12 +312,12 @@ async function _parseArguments() {
 				for (let i = 0; i < argsLen; i++) {
 					const defaultImportFile = args[argIndex + i];
 					if (await Utils.fsExists(defaultImportFile)) {
-						const stat = await fs.promises.stat(defaultImportFile);
+						const stat = await fs.stat(defaultImportFile);
 						if (stat.isDirectory()) {
 							console.warn("WARN: Import of directories is not supported");
 						} else {
 							const defaultImportKey = path.parse(defaultImportFile).base;
-							const defaultImportData = await fs.promises.readFile(defaultImportFile);
+							const defaultImportData = await fs.readFile(defaultImportFile);
 
 							console.log("IMPORT", defaultImportKey);
 							zip.store(defaultImportKey, defaultImportData);
@@ -366,6 +376,9 @@ function _showCommands() {
 	console.log("Secure erase");
 	console.log(`    ${packageName} erase ./${EXAMPLE_NAME}.txt`);
 	console.log(`    ${packageName} nuke`);
+	console.log("");
+	console.log("Edit config");
+	console.log(`    ${packageName} config`);
 }
 
 function _prompt(str, hidden) {
@@ -410,15 +423,15 @@ async function _resolveNewPass(pass) {
 }
 
 async function _secureErase(filePath) {
-	const stat = await fs.promises.stat(filePath);
+	const stat = await fs.stat(filePath);
 	if (stat.isDirectory()) {
 		throw new Error("Secure erasure of directories is not supported");
 	}
 	if (!stat.size) {
 		return;
 	}
-	await fs.promises.writeFile(filePath, CryptoProvider.randomBytes(stat.size));
-	await fs.promises.rm(filePath);
+	await fs.writeFile(filePath, CryptoProvider.randomBytes(stat.size));
+	await fs.rm(filePath);
 }
 
 (async function execute() {
