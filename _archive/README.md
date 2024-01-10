@@ -1,2 +1,0 @@
-# incypher
-Encryption technologies

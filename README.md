@@ -1,7 +1,6 @@
-
 # Incypher
 
-A secure archiver intended to store crypto keys and seed phrases
+An encrypted keystore intended to store crypto keys, seed phrases, passwords, files and other sensitive data
 
 ![Incypher Logo](_artifacts/icon-logo.png)
 
@@ -77,7 +76,7 @@ incypher export seed/ravencoin ./ravencoin.txt
 ##### Change password
 
 ```
-incypher passwd
+incypher password
 ```
 
 ##### Secure erase
@@ -100,18 +99,18 @@ incypher config
 Incypher supports syncing your encrypted keystore to the cloud making it easy to use across multiple platforms!
 <br/>
 <br/>
-The config contains commands to ```init```, ```upload``` and ```download``` using *rclone* by default. We recommend using *rclone* as it can connect to many different cloud providers as well as virtual backends that can add additional encryption, chunking and compression.
+The config contains commands to `init`, `upload` and `download` using _rclone_ by default. We recommend using _rclone_ as it can connect to many different cloud providers as well as virtual backends that can add additional encryption, chunking and compression.
 
 ### Enabling cloud sync
 
 Follow the steps below to enable cloud sync:
 
 1. Install and configure [rclone](https://rclone.org)
-1. Add ```rclone``` to your ```PATH```
-1. Run ```incypher config``` to edit the config file
-1. Update ```sync```.```enabled```: to ```true```
+1. Add `rclone` to your `PATH`
+1. Run `incypher config` to edit the config file
+1. Update `sync`.`enabled`: to `true`
 
-Optionally you can customize the ```init```, ```upload``` and ```download``` commands in the config file to suit your needs.
+Optionally you can customize the `init`, `upload` and `download` commands in the config file to suit your needs.
 
 ---
 
@@ -120,11 +119,11 @@ Optionally you can customize the ```init```, ```upload``` and ```download``` com
 If you prefer you can build the binaries yourself:
 
 1. Install [NodeJS](https://nodejs.org/en/)
-1. ```cd``` to the code directory
-1. ```npm install```
-1. ```npm run build```
+1. `cd` to the code directory
+1. `npm install`
+1. `npm run build`
 
-Binaries will be output to the ```build``` directory
+Binaries will be output to the `build` directory
 
 ---
 
@@ -144,6 +143,11 @@ Incypher creates an archive then encrypts the data using [AES-256](https://en.wi
 ---
 
 ## Notes
-- You can override the default config directory location by creating an environment variable called ```INCYPHER_HOME```
-- You can optionally drag-and-drop file(s) on the executable to import them directly
-- You can disable encryption by passing an empty passphrase (not recommended). With encryption disabled you can open the store.incypher file with your favorite zip archiver
+
+-   You can override the default config directory location by creating an environment variable called `INCYPHER_HOME`
+-   You can optionally drag-and-drop file(s) on the executable to import them directly
+-   You can disable encryption by passing an empty passphrase (not recommended). With encryption disabled you can open the store.incypher file with your favorite zip archiver
+
+### Portable mode
+
+Create a directory called ".incypher" in the same directory as the executable. Doing so will use this directory for the config and keystore instead of the default location. Useful for running from a USB drive.
