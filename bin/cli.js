@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 //Node imports
+const fsRaw = require("fs");
 const {promises: fs, constants: fs_constants} = require("fs");
 const path = require("path");
 const childProcess = require("child_process");
@@ -17,16 +18,20 @@ const CryptoZip = require("../src/crypto-zip");
 const CryptoProvider = require("../src/crypto-provider");
 const Utils = require("../src/utils");
 
+//Portable mode?
+const PORTABLE_DIR = path.join(process.cwd(), `.${packageName}`);
+const PORTABLE_MODE = fsRaw.existsSync(PORTABLE_DIR);
+
 //File constants
-const DEFAULT_DIR = path.join(homeDir, `.${packageName}`);
+const DEFAULT_DIR = PORTABLE_MODE ? PORTABLE_DIR : path.join(homeDir, `.${packageName}`);
 const CONFIG_FILE = path.join(DEFAULT_DIR, `${packageName}-config.json`);
 const CONFIG = {
 	name: packageName,
 	author: packageAuthor,
 	version: packageVersion,
 	debug: false,
-	backup: true,
-	store: path.join(DEFAULT_DIR, `store.${packageName}`),
+	backup: PORTABLE_MODE ? false : true,
+	store: PORTABLE_MODE ? path.join(`.${packageName}`, `store.${packageName}`) : path.join(DEFAULT_DIR, `store.${packageName}`),
 	sync: {
 		enabled: false,
 		init: `rclone mkdir remote:${packageName}`,
@@ -124,7 +129,12 @@ async function _parseArguments() {
 			await _readStore(filePath, zip);
 			console.log("VIEW", viewKey);
 			console.log("");
-			console.log("   ", await zip.retrieve(viewKey));
+			const viewContent = await zip.retrieve(viewKey);
+			if (viewContent !== null) {
+				console.log("   ", viewContent);
+			} else {
+				console.log("   ", `--- not found ---`);
+			}
 
 			break;
 
@@ -146,7 +156,7 @@ async function _parseArguments() {
 				await _secureErase(openFileName);
 			} else {
 				console.log("");
-				console.log("   ", `${openKey} not found`);
+				console.log("   ", `--- not found ---`);
 			}
 
 			break;
@@ -167,8 +177,14 @@ async function _parseArguments() {
 
 			const deletePass = await _readStore(filePath, zip);
 			console.log("DELETE", deleteKey);
-			zip.delete(deleteKey);
-			await _writeStore(filePath, zip, deletePass);
+			const deleteContent = await zip.retrieve(deleteKey);
+			if (deleteContent) {
+				zip.delete(deleteKey);
+				await _writeStore(filePath, zip, deletePass);
+			} else {
+				console.log("");
+				console.log("   ", `--- not found ---`);
+			}
 
 			break;
 
@@ -204,11 +220,12 @@ async function _parseArguments() {
 				await fs.writeFile(exportFileName, exportContent);
 			} else {
 				console.log("");
-				console.log("   ", `${exportKey} not found`);
+				console.log("   ", `--- not found ---`);
 			}
 
 			break;
 
+		case "password":
 		case "passwd":
 			await _readStore(filePath, zip);
 			await _writeStore(filePath, zip, null);
@@ -320,7 +337,7 @@ function _showCommands() {
 	console.log(`    ${packageName} export seed/${EXAMPLE_NAME} ./${EXAMPLE_NAME}.txt`);
 	console.log("");
 	console.log("Change password");
-	console.log(`    ${packageName} passwd`);
+	console.log(`    ${packageName} password`);
 	console.log("");
 	console.log("Secure erase");
 	console.log(`    ${packageName} erase ./${EXAMPLE_NAME}.txt`);
@@ -432,6 +449,11 @@ async function _writeStore(filePath, zip, pass) {
 
 	console.log("");
 	console.log(`${packageName} ${packageVersion}`);
+	console.log("");
+	if (PORTABLE_MODE) {
+		console.log(`PORTABLE MODE`);
+	}
+
 	try {
 		await _initialize();
 		result = await _parseArguments();
