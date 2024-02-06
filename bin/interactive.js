@@ -2,56 +2,15 @@
 
 import DeluxeCLI, {Screen, Window, Input, Button, Text, List, ORIGIN, BORDER, Theme} from "deluxe-cli";
 
-import ThemeInteractiv from "./interactive-theme.js";
+import ThemeInteractive from "./interactive/theme-interactive.js";
+import WindowRequestPass from "./interactive/window-request-pass.js";
 
 import packageJson from "../package.json" assert {type: "json"};
 const {name: packageName, version: packageVersion, author: packageAuthor} = packageJson;
 
-const txtExistingPassHeading = new Text({
-	id: "txtExistingPassHeading",
-	value: "Enter the passphrase to decrypt the keystore.",
-	position: Text.DEFAULT_POSITION.extend({
-		width: "100%"
-	})
-});
-const inputExistingPass = new Input({
-	id: "inputExistingPass",
-	position: Input.DEFAULT_POSITION.extend({
-		originX: ORIGIN.X.CENTER,
-		originY: ORIGIN.Y.CENTER,
-		labelOriginX: ORIGIN.X.LEFT
-	}),
-	label: " Passphrase ",
-	mask: Input.DEFAULT_MASK
-});
-const btnDecrypt = new Button({
-	id: "btnDecrypt",
-	position: Button.DEFAULT_POSITION.extend({
-		marginTop: 1,
-		marginBottom: 1
-	}),
-	value: "Decrypt",
-	onSelect: () => {
-		windowExistingPass.remove();
-	}
-});
-const windowExistingPass = new Window({
-	id: "windowExistingPass",
-	position: Window.DEFAULT_POSITION.extend({
-		labelOriginX: ORIGIN.X.CENTER,
-		width: "100%",
-		paddingTop: 1,
-		paddingRight: 2,
-		paddingBottom: 1,
-		paddingLeft: 2
-	}),
-	style: Window.DEFAULT_STYLE.extend({
-		border: BORDER.DOUBLE
-	}),
-	label: " - ENCRYPTED - ",
-	children: [txtExistingPassHeading, inputExistingPass, btnDecrypt],
-	onSelect: () => {
-		windowExistingPass.remove();
+const windowRequestPass = new WindowRequestPass({
+	onSubmit: (pass) => {
+		txtStatus.value = `Passphrase entered: ${pass}`;
 	}
 });
 
@@ -134,18 +93,18 @@ const screenMain = new Screen({
 		border: BORDER.DOUBLE
 	}),
 	label: ` ${packageName} v${packageVersion} `,
-	children: [listRootOptions, txtStatus, windowExistingPass]
+	children: [listRootOptions, txtStatus, windowRequestPass.component]
 });
 
 class Interactive {
 	static run(args, config, {readStore, writeStore, secureErase}) {
-		const theme = new ThemeInteractiv();
+		const theme = new ThemeInteractive();
 		theme.applyToComponent(screenMain);
 
 		DeluxeCLI.debug = true;
 		DeluxeCLI.initialize();
 		DeluxeCLI.clear();
-		DeluxeCLI.focus(inputExistingPass);
+		windowRequestPass.focus();
 		DeluxeCLI.render(screenMain);
 
 		let showingLog = false;

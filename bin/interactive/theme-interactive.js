@@ -1,6 +1,6 @@
 import {Theme, Style, BORDER, COLORS} from "deluxe-cli";
 
-class ThemeInteractiv extends Theme {
+class ThemeInteractive extends Theme {
 	static DEFAULT_MAP = {
 		Screen: new Style({
 			backgroundColor: COLORS.BG.BLACK,
@@ -63,8 +63,8 @@ class ThemeInteractiv extends Theme {
 		})
 	};
 
-	constructor(map = ThemeInteractiv.DEFAULT_MAP, focusMap = ThemeInteractiv.DEFAULT_FOCUS_MAP) {
+	constructor(map = ThemeInteractive.DEFAULT_MAP, focusMap = ThemeInteractive.DEFAULT_FOCUS_MAP) {
 		super(map, focusMap);
 	}
 }
-export default ThemeInteractiv;
+export default ThemeInteractive;
