@@ -1,13 +1,20 @@
 //Lib imports
-const JSZip = require("jszip");
+import JSZip from "jszip";
 
 //Local imports
-const Utils = require("./utils");
+import Utils from "./utils.js";
 
 class _class {
 	constructor(config) {
 		this.config = config;
 		this.zip = new JSZip();
+
+		this.store = this.store.bind(this);
+		this.retrieve = this.retrieve.bind(this);
+		this.list = this.list.bind(this);
+		this.delete = this.delete.bind(this);
+		this.setStream = this.setStream.bind(this);
+		this.getStream = this.getStream.bind(this);
 	}
 
 	store(key, value) {
@@ -64,4 +71,4 @@ class _class {
 		return this.zip.generateAsync({type: "nodebuffer"});
 	}
 }
-module.exports = _class;
+export default _class;

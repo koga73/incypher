@@ -1,14 +1,15 @@
 //Node imports
-const {promises: fs} = require("fs");
-const path = require("path");
+import {promises as fs} from "fs";
+import path from "path";
 
 //Node imports
-const Zip = require("./zip");
-const CryptoProvider = require("./crypto-provider");
-const Utils = require("./utils");
+import Zip from "./zip.js";
+import CryptoProvider from "./crypto-provider.js";
+import Utils from "./utils.js";
 
 //Local imports
-const {name: packageName, version: packageVersion, author: packageAuthor} = require("../package.json");
+import packageJson from "../package.json" assert {type: "json"};
+const {name: packageName, version: packageVersion, author: packageAuthor} = packageJson;
 
 //Header data constants
 const FILE_MESSAGE = `encrypted with ${packageName} ${Utils.getFixedVersion(packageVersion)} \n`;
@@ -27,6 +28,11 @@ class _class extends Zip {
 		this.currentIncrement = (CryptoProvider.random() * 0xffff) >> 0; //Start with a random increment
 		this.content = "";
 		this.isEncrypted = false;
+
+		this.load = this.load.bind(this);
+		this.save = this.save.bind(this);
+		this.decrypt = this.decrypt.bind(this);
+		this.encrypt = this.encrypt.bind(this);
 	}
 
 	async load(filePath) {
@@ -119,7 +125,7 @@ class _class extends Zip {
 		}
 	}
 }
-module.exports = _class;
+export default _class;
 
 //Determine if file content is encrypted
 function _isEncrypted(content) {

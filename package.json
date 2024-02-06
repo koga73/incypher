@@ -2,6 +2,7 @@
 	"name": "incypher",
 	"version": "0.8.0",
 	"description": "An encrypted keystore intended to store crypto keys, seed phrases, passwords, files and other sensitive data",
+	"type": "module",
 	"bin": {
 		"incypher": "bin/cli.js"
 	},
@@ -15,6 +16,7 @@
 	},
 	"license": "GPL-3.0",
 	"dependencies": {
+		"deluxe-cli": "^0.1.0",
 		"jszip": "^3.10.1"
 	},
 	"devDependencies": {
