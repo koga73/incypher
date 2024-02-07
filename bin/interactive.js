@@ -3,16 +3,12 @@
 import DeluxeCLI, {Screen, Window, Input, Button, Text, List, ORIGIN, BORDER, Theme} from "deluxe-cli";
 
 import ThemeInteractive from "./interactive/theme-interactive.js";
-import WindowRequestPass from "./interactive/window-request-pass.js";
+import WindowPrompt from "./interactive/window-prompt.js";
 
 import packageJson from "../package.json" assert {type: "json"};
 const {name: packageName, version: packageVersion, author: packageAuthor} = packageJson;
 
-const windowRequestPass = new WindowRequestPass({
-	onSubmit: (pass) => {
-		txtStatus.value = `Passphrase entered: ${pass}`;
-	}
-});
+const theme = new ThemeInteractive();
 
 const listRootOptions = new List({
 	id: "listRootOptions",
@@ -26,42 +22,44 @@ const listRootOptions = new List({
 	activeIndex: 0,
 	items: ["Exit", "Store", "List", "Import", "Export", "Config", "Passphrase", "Erase", "Nuke"],
 	onChange: ({activeIndex, activeItem}) => {
-		switch (activeIndex) {
-			case 0:
+		switch (activeItem.toLowerCase()) {
+			case "exit":
 				txtStatus.value = `Exit the program.`;
 				break;
-			case 1:
+			case "store":
 				txtStatus.value = `Store a new value in the keystore.`;
 				break;
-			case 2:
+			case "list":
 				txtStatus.value = `List all keys in the keystore.`;
 				break;
-			case 3:
+			case "import":
 				txtStatus.value = `Import a file into the keystore.`;
 				break;
-			case 4:
+			case "export":
 				txtStatus.value = `Export a file from the keystore.`;
 				break;
-			case 5:
+			case "config":
 				txtStatus.value = `Edit the config file.`;
 				break;
-			case 6:
+			case "passphrase":
 				txtStatus.value = `Change the passphrase.`;
 				break;
-			case 7:
+			case "erase":
 				txtStatus.value = `Securely erase a file.`;
 				break;
-			case 8:
+			case "nuke":
 				txtStatus.value = `Securely erase the entire keystore.`;
 				break;
 		}
 	},
 	onSelect: ({selectedIndex, selectedItem}) => {
-		switch (selectedIndex) {
-			case 0:
-				setTimeout(() => {
-					DeluxeCLI.exit();
-				}, 250);
+		switch (selectedItem.toLowerCase()) {
+			case "exit":
+				doExit();
+				break;
+
+			case "store":
+				doStore();
 				break;
 		}
 	}
@@ -93,18 +91,125 @@ const screenMain = new Screen({
 		border: BORDER.DOUBLE
 	}),
 	label: ` ${packageName} v${packageVersion} `,
-	children: [listRootOptions, txtStatus, windowRequestPass.component]
+	children: [listRootOptions, txtStatus]
 });
+
+function doExit() {
+	setTimeout(() => {
+		DeluxeCLI.exit();
+	}, 250);
+}
+
+async function doStore() {
+	try {
+		const storeKey = await _prompt({
+			id: "windowStoreKey",
+			heading: `Please enter a name for the key entry`,
+			inputLabel: " Key name ",
+			btnValue: "Next",
+			windowLabel: " Store new key "
+		});
+		txtStatus.value = `Storing new value for "${storeKey}".`;
+
+		const storeVal = await _prompt({
+			id: "windowStoreVal",
+			heading: `Please enter the value for "${storeKey}"`,
+			inputLabel: " Value ",
+			btnValue: "Done",
+			windowLabel: " Store new key/value "
+		});
+
+		const storePass = await _resolvePass();
+
+		/*const storePass = await readStore(filePath, zip, config, _requestPass);
+		txtStatus.value = `Store "${storeKey}".`;
+		zip.store(storeKey, storeVal);
+		await writeStore(filePath, zip, storePass, config, _resolvePass);
+		txtStatus.value = `Stored "${storeKey}".`;*/
+	} catch (err) {
+		txtStatus.value = err.message;
+	}
+}
+
+async function _prompt(options) {
+	return new Promise((resolve, reject) => {
+		const prompt = new WindowPrompt({
+			id: "windowPrompt",
+			...options,
+			onSubmit: (value) => {
+				resolve(value);
+			},
+			onClose: () => {
+				reject(new Error("User cancelled."));
+			}
+		});
+		theme.applyToComponent(prompt.component);
+		screenMain.addChild(prompt.component);
+		prompt.focus();
+	});
+}
+
+async function _requestPass(zip, options) {
+	if (!zip.isEncrypted) {
+		return "";
+	}
+	return await _prompt({
+		id: "windowPass",
+		heading: "Please enter your passphrase to unlock the keystore",
+		inputLabel: " Passphrase ",
+		inputMask: Input.DEFAULT_MASK,
+		btnValue: "Unlock",
+		windowLabel: " - ENCRYPTED - ",
+		windowLabelOriginX: ORIGIN.X.CENTER,
+		...options
+	});
+}
+
+async function _resolvePass(pass, options) {
+	if (pass != null) {
+		return pass;
+	}
+	const passphrase = await _prompt({
+		id: "windowPass",
+		heading: "Create a passphrase to encrypt the keystore",
+		inputLabel: " Passphrase ",
+		inputMask: Input.DEFAULT_MASK,
+		btnValue: "Next",
+		windowLabel: " - ENCRYPT - ",
+		windowLabelOriginX: ORIGIN.X.CENTER,
+		...options
+	});
+	const confirm = await _prompt({
+		id: "windowPass",
+		heading: "Confirm the passphrase to encrypt the keystore",
+		inputLabel: " Passphrase ",
+		inputMask: Input.DEFAULT_MASK,
+		btnValue: "Lock",
+		windowLabel: " - ENCRYPT - ",
+		windowLabelOriginX: ORIGIN.X.CENTER,
+		...options
+	});
+	if (passphrase != confirm) {
+		txtStatus.value = "Passphrase does not match.";
+		//Recycle
+		return await _resolvePass(pass, options);
+	}
+	if (passphrase == "") {
+		//TODO: Move to log
+		txtStatus.value = "WARN: Empty password specified - the data store will not be encrypted!";
+	} else {
+		txtStatus.value = "Passphrase accepted.";
+	}
+	return passphrase;
+}
 
 class Interactive {
 	static run(args, config, {readStore, writeStore, secureErase}) {
-		const theme = new ThemeInteractive();
 		theme.applyToComponent(screenMain);
 
 		DeluxeCLI.debug = true;
 		DeluxeCLI.initialize();
 		DeluxeCLI.clear();
-		windowRequestPass.focus();
 		DeluxeCLI.render(screenMain);
 
 		let showingLog = false;

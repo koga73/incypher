@@ -10,10 +10,10 @@ class ThemeInteractive extends Theme {
 		}),
 		Window: new Style({
 			border: BORDER.DOUBLE,
-			backgroundColor: COLORS.BG.RED,
-			color: COLORS.FG.BLACK,
-			borderColor: COLORS.FG.WHITE,
-			labelColor: COLORS.FG.WHITE
+			backgroundColor: COLORS.BG.BLACK,
+			color: COLORS.FG.WHITE,
+			borderColor: COLORS.FG.MAGENTA,
+			labelColor: COLORS.FG.CYAN
 		}),
 		Text: new Style({
 			color: COLORS.FG.WHITE
@@ -43,8 +43,16 @@ class ThemeInteractive extends Theme {
 			thumbCharacter: String.fromCharCode(0x2588),
 			thumbColor: COLORS.FG.WHITE
 		}),
+
 		txtStatus: new Style({
 			color: COLORS.FG.CYAN
+		}),
+		windowPass: new Style({
+			border: BORDER.DOUBLE,
+			backgroundColor: COLORS.BG.RED,
+			color: COLORS.FG.BLACK,
+			borderColor: COLORS.FG.WHITE,
+			labelColor: COLORS.FG.WHITE
 		})
 	};
 
