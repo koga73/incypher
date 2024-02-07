@@ -19,15 +19,15 @@ class WindowPrompt {
 			id: `${id}_heading`,
 			value: heading,
 			position: Text.DEFAULT_POSITION.extend({
-				width: "100%"
+				width: "100%",
+				marginBottom: 1
 			})
 		});
 		const inputUser = new Input({
 			id: `${id}_input`,
 			position: Input.DEFAULT_POSITION.extend({
-				originX: ORIGIN.X.CENTER,
-				originY: ORIGIN.Y.CENTER,
-				labelOriginX: ORIGIN.X.LEFT
+				labelOriginX: ORIGIN.X.LEFT,
+				marginBottom: 3
 			}),
 			label: inputLabel,
 			mask: inputMask,
@@ -47,9 +47,11 @@ class WindowPrompt {
 		const window = new Window({
 			id,
 			position: Window.DEFAULT_POSITION.extend({
-				originY: ORIGIN.Y.TOP,
+				originX: ORIGIN.X.CENTER,
+				originY: ORIGIN.Y.CENTER,
 				labelOriginX: windowLabelOriginX,
 				width: "100%",
+				height: 0, //Auto
 				paddingTop: 1,
 				paddingRight: 2,
 				paddingBottom: 1,
