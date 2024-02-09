@@ -1,7 +1,7 @@
 {
 	"name": "incypher",
-	"version": "0.6.1",
-	"description": "A secure archiver intended to store crypto keys and seed phrases",
+	"version": "0.8.0",
+	"description": "An encrypted keystore intended to store crypto keys, seed phrases, passwords, files and other sensitive data",
 	"bin": {
 		"incypher": "bin/cli.js"
 	},
@@ -34,7 +34,10 @@
 		"archive",
 		"zip",
 		"secure",
-		"store"
+		"store",
+		"rclone",
+		"cloud",
+		"sync"
 	],
 	"bugs": {
 		"url": "https://github.com/koga73/incypher/issues"
