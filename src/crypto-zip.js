@@ -22,8 +22,8 @@ const HEADER_SIZE = FILE_MESSAGE.length + CryptoProvider.IV_LEN + INCREMENTAL_BU
 const FILE_MESSAGE_REGEX = /^(.+?)\d+[\s\S]*$/;
 
 class _class extends Zip {
-	constructor(config) {
-		super(config);
+	constructor(config, logger) {
+		super(config, logger);
 
 		this.currentIncrement = (CryptoProvider.random() * 0xffff) >> 0; //Start with a random increment
 		this.content = "";
@@ -37,7 +37,7 @@ class _class extends Zip {
 
 	async load(filePath) {
 		if (this.config.debug) {
-			console.info("crypto-zip::load", filePath);
+			this.logger.info("crypto-zip::load", filePath);
 		}
 		if (!(await Utils.fsExists(filePath))) {
 			return false;
@@ -50,7 +50,7 @@ class _class extends Zip {
 
 	async save(filePath) {
 		if (this.config.debug) {
-			console.info("crypto-zip::save", filePath);
+			this.logger.info("crypto-zip::save", filePath);
 		}
 		const content = this.content;
 		await fs.writeFile(filePath, content);
@@ -63,7 +63,7 @@ class _class extends Zip {
 
 	async decrypt(passphrase) {
 		if (this.config.debug) {
-			console.info("crypto-zip::decrypt");
+			this.logger.info("crypto-zip::decrypt");
 		}
 		const content = this.content;
 		if (!(content && content.length)) {
@@ -100,7 +100,7 @@ class _class extends Zip {
 	//Encryption takes place using AES-256-GCM and the GCM integrity tag is appended to the end of the ciphertext
 	async encrypt(passphrase) {
 		if (this.config.debug) {
-			console.info("crypto-zip::encrypt");
+			this.logger.info("crypto-zip::encrypt");
 		}
 		const stream = await this.getStream();
 		if (!(stream && stream.length)) {

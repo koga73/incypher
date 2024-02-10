@@ -8,9 +8,8 @@ import childProcess from "child_process";
 import {homedir} from "os";
 
 //Local imports
-import Interactive from "./interactive.js";
-import Args from "./args.js";
-import CryptoProvider from "../src/crypto-provider.js";
+import ArgInterface from "./arg-interface.js";
+import InteractiveInterface from "./interactive-interface.js";
 import Utils from "../src/utils.js";
 
 //package.json
@@ -88,58 +87,6 @@ async function _initialize() {
 	return config;
 }
 
-async function _secureErase(filePath) {
-	const stat = await fs.stat(filePath);
-	if (stat.isDirectory()) {
-		throw new Error("Secure erasure of directories is not supported");
-	}
-	if (!stat.size) {
-		return;
-	}
-	await fs.writeFile(filePath, CryptoProvider.randomBytes(stat.size));
-	await fs.rm(filePath);
-}
-
-async function _readStore(filePath, zip, config, requestPassFunc) {
-	if (config.sync.enabled) {
-		console.log("SYNC DOWNLOAD");
-		if (config.debug) {
-			console.log(config.sync.download);
-		}
-		try {
-			childProcess.execSync(config.sync.download);
-		} catch (err) {
-			throw new Error("Sync download command failed");
-		}
-	}
-
-	console.log("READ", filePath);
-	const success = await zip.load(filePath);
-	const pass = success ? await requestPassFunc(zip) : null;
-	await zip.decrypt(pass);
-
-	return pass;
-}
-
-async function _writeStore(filePath, zip, pass, config, resolvePassFunc) {
-	await zip.encrypt(await resolvePassFunc(pass));
-
-	console.log("WRITE", filePath);
-	await zip.save(filePath);
-
-	if (config.sync.enabled) {
-		console.log("SYNC UPLOAD");
-		if (config.debug) {
-			console.log(config.sync.upload);
-		}
-		try {
-			childProcess.execSync(config.sync.upload);
-		} catch (err) {
-			throw new Error("Sync upload command failed");
-		}
-	}
-}
-
 (async function execute() {
 	var result = 0;
 
@@ -157,16 +104,13 @@ async function _writeStore(filePath, zip, pass, config, resolvePassFunc) {
 	try {
 		config = await _initialize();
 
+		let implementation = null;
 		if (argsLen >= 1) {
-			result = await Args.run(args, config, {defaultDir: DEFAULT_DIR, configFile: CONFIG_FILE}, {readStore: _readStore, writeStore: _writeStore, secureErase: _secureErase});
+			implementation = new ArgInterface(config, {defaultDir: DEFAULT_DIR, configFile: CONFIG_FILE});
 		} else {
-			result = await Interactive.run(
-				args,
-				config,
-				{defaultDir: DEFAULT_DIR, configFile: CONFIG_FILE},
-				{readStore: _readStore, writeStore: _writeStore, secureErase: _secureErase}
-			);
+			implementation = new InteractiveInterface(config, {defaultDir: DEFAULT_DIR, configFile: CONFIG_FILE});
 		}
+		result = await implementation.execute(args);
 	} catch (err) {
 		if (config.debug) {
 			console.error(err);
