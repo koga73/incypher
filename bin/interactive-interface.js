@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import DeluxeCLI, {Screen, Window, Input, Button, Text, List, ORIGIN, BORDER, CURSOR, RenderLog} from "deluxe-cli";
+import DeluxeCLI, {Screen, Window, Input, Button, Text, List, ORIGIN, BORDER, CURSOR, Logger} from "deluxe-cli";
 
 import BaseInterface from "./base-interface.js";
 import ThemeInteractive from "./interactive/theme-interactive.js";
@@ -13,7 +13,7 @@ class _class extends BaseInterface {
 	constructor(config, filePaths) {
 		super(config, filePaths);
 
-		this.logger = RenderLog; //TODO: New logger instance
+		this.logger = Logger; //TODO: New logger instance
 		this.theme = null;
 		this.components = null;
 
@@ -194,7 +194,12 @@ class _class extends BaseInterface {
 			return;
 		}
 
-		await this.store(key, value);
+		try {
+			await this.store(key, value);
+		} catch (err) {
+			this.components.status.value = `Error: ${err.message}`;
+			//logger.error(err);
+		}
 	}
 
 	_prompt(question, options) {
