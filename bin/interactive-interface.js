@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import childProcess from "child_process";
+
 import DeluxeCLI, {Screen, Window, Input, Button, Text, List, ORIGIN, BORDER, CURSOR, Logger} from "deluxe-cli";
 
 import BaseInterface from "./base-interface.js";
@@ -13,18 +15,22 @@ class _class extends BaseInterface {
 	constructor(config, filePaths) {
 		super(config, filePaths);
 
-		this.logger = Logger; //TODO: New logger instance
+		this.logger = new Logger({
+			output: Logger.OUTPUT.MEMORY,
+			level: config.debug ? Logger.LEVEL.DEBUG : Logger.LEVEL.INFO
+		});
 		this.theme = null;
 		this.components = null;
 
 		this._isComplete = false;
 
+		this._setStatus = this._setStatus.bind(this);
 		this._doExit = this._doExit.bind(this);
 		this._doStore = this._doStore.bind(this);
 	}
 
 	async execute(args) {
-		const {_doExit, _doStore} = this;
+		const {_setStatus, _doExit, _doStore} = this;
 
 		const listRootOptions = new List({
 			id: "listRootOptions",
@@ -36,35 +42,35 @@ class _class extends BaseInterface {
 				paddingLeft: 2
 			}),
 			activeIndex: 0,
-			items: ["Exit", "Store", "List", "Import", "Export", "Config", "Passphrase", "Erase", "Nuke"],
+			items: ["Exit", "Store", "List", "Import", "Export", "Config", "Passphrase", "More..."],
 			onChange: ({activeIndex, activeItem}) => {
 				switch (activeItem.toLowerCase()) {
 					case "exit":
-						txtStatus.value = `Exit the program.`;
+						_setStatus(`Exit the program.`);
 						break;
 					case "store":
-						txtStatus.value = `Store a new value in the keystore.`;
+						_setStatus(`Store a new value in the keystore.`);
 						break;
 					case "list":
-						txtStatus.value = `List all keys in the keystore.`;
+						_setStatus(`List all keys in the keystore.`);
 						break;
 					case "import":
-						txtStatus.value = `Import a file into the keystore.`;
-						break;
-					case "export":
-						txtStatus.value = `Export a file from the keystore.`;
+						_setStatus(`Import a file into the keystore.`);
 						break;
 					case "config":
-						txtStatus.value = `Edit the config file.`;
+						_setStatus(`Edit the config file.`);
 						break;
 					case "passphrase":
-						txtStatus.value = `Change the passphrase.`;
+						_setStatus(`Change the passphrase.`);
+						break;
+					case "more...":
+						_setStatus(`More options.`);
 						break;
 					case "erase":
-						txtStatus.value = `Securely erase a file.`;
+						_setStatus(`Securely erase a file.`);
 						break;
 					case "nuke":
-						txtStatus.value = `Securely erase the entire keystore.`;
+						_setStatus(`Securely erase the entire keystore.`);
 						break;
 				}
 			},
@@ -76,6 +82,15 @@ class _class extends BaseInterface {
 
 					case "store":
 						_doStore();
+						break;
+
+					case "more...":
+						const newItems = [...listRootOptions.items];
+						newItems.pop(); //Remove "More..."
+						newItems.push("Erase", "Nuke");
+						listRootOptions.items = newItems;
+						listRootOptions.activeIndex = newItems.length - 2;
+						listRootOptions.selectedIndex = -1;
 						break;
 				}
 			}
@@ -131,7 +146,7 @@ class _class extends BaseInterface {
 				if (key.ctrl === true && key.name === "l") {
 					showingLog = !showingLog;
 					if (showingLog) {
-						DeluxeCLI.showLog();
+						DeluxeCLI.showLog(_this.logger.memory);
 					} else {
 						DeluxeCLI.hideLog();
 					}
@@ -163,6 +178,10 @@ class _class extends BaseInterface {
 		return 0;
 	}
 
+	_setStatus(value) {
+		this.components.status.value = value;
+	}
+
 	_doExit() {
 		const _this = this;
 		setTimeout(() => {
@@ -171,7 +190,7 @@ class _class extends BaseInterface {
 	}
 
 	async _doStore() {
-		const {logger, _prompt} = this;
+		const {logger, _setStatus, _prompt} = this;
 
 		let key, value;
 		try {
@@ -181,7 +200,7 @@ class _class extends BaseInterface {
 				btnValue: "Next",
 				windowLabel: " Store new key "
 			});
-			logger.log(`Storing new value for "${key}".`);
+			_setStatus(`Storing new value for "${key}".`);
 
 			value = await _prompt(`Please enter the value for "${key}"`, {
 				id: "windowStoreVal",
@@ -190,16 +209,27 @@ class _class extends BaseInterface {
 				windowLabel: " Store new key/value "
 			});
 		} catch (err) {
-			logger.log(err);
+			_setStatus(err.message);
 			return;
 		}
 
 		try {
 			await this.store(key, value);
+			_setStatus(`Stored "${key}" successfully.`);
 		} catch (err) {
-			this.components.status.value = `Error: ${err.message}`;
-			//logger.error(err);
+			logger.error(err);
+			_setStatus(err.message);
+			return;
 		}
+	}
+
+	_execChildProcess(command) {
+		const {logger} = this;
+		DeluxeCLI.showLog(logger.memory);
+		process.nextTick(() => {
+			childProcess.execSync(command);
+			DeluxeCLI.hideLog();
+		});
 	}
 
 	_prompt(question, options) {
@@ -236,8 +266,8 @@ class _class extends BaseInterface {
 		});
 	}
 
-	async _resolvePass(pass, options) {
-		const {logger, _prompt} = this;
+	async _resolvePass(options) {
+		const {_setStatus, _prompt} = this;
 
 		const passphrase = await _prompt("Create a passphrase to encrypt the keystore", {
 			id: "windowPass",
@@ -258,14 +288,14 @@ class _class extends BaseInterface {
 			...options
 		});
 		if (passphrase != confirm) {
-			logger.log("Passphrase does not match.");
+			_setStatus("Passphrase does not match.");
 			//Recycle
-			return await _resolvePass(pass, options);
+			return await _resolvePass(options);
 		}
 		if (passphrase == "") {
-			logger.warn("WARN: Empty password specified - the keystore will not be encrypted!");
+			_setStatus("WARN: Empty password specified - the keystore will not be encrypted!");
 		} else {
-			logger.log("Passphrase accepted.");
+			_setStatus("Passphrase accepted.");
 		}
 		return passphrase;
 	}

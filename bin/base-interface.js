@@ -31,6 +31,7 @@ class _class {
 		this._readStore = this._readStore.bind(this);
 		this._writeStore = this._writeStore.bind(this);
 		this._secureErase = this._secureErase.bind(this);
+		this._execChildProcess = this._execChildProcess.bind(this);
 
 		this._prompt = this._prompt.bind(this);
 		this._requestPass = this._requestPass.bind(this);
@@ -207,15 +208,16 @@ class _class {
 	}
 
 	async _readStore() {
-		const {zip, filePath, config, logger, _requestPass} = this;
+		const {zip, filePath, config, logger, _requestPass, _execChildProcess} = this;
 
 		if (config.sync.enabled) {
 			logger.log("SYNC DOWNLOAD");
 			if (config.debug) {
 				logger.log(config.sync.download);
 			}
+
 			try {
-				childProcess.execSync(config.sync.download);
+				_execChildProcess(config.sync.download);
 			} catch (err) {
 				throw new Error("Sync download command failed");
 			}
@@ -223,16 +225,28 @@ class _class {
 
 		logger.log("READ", filePath);
 		const success = await zip.load(filePath);
-		const pass = success ? (zip.isEncrypted ? await _requestPass() : "") : null;
-		await zip.decrypt(pass);
+
+		let pass = null;
+		try {
+			pass = success ? (zip.isEncrypted ? await _requestPass() : "") : null;
+			await zip.decrypt(pass);
+		} catch (err) {
+			logger.error(err);
+			throw new Error("Failed to decrypt keystore");
+		}
 
 		return pass;
 	}
 
 	async _writeStore(pass = null) {
-		const {zip, filePath, config, logger, _resolvePass} = this;
+		const {zip, filePath, config, logger, _resolvePass, _execChildProcess} = this;
 
-		await zip.encrypt(pass !== null ? pass : await _resolvePass(pass));
+		try {
+			await zip.encrypt(pass !== null ? pass : await _resolvePass());
+		} catch (err) {
+			logger.error(err);
+			throw new Error("Failed to encrypt keystore");
+		}
 
 		logger.log("WRITE", filePath);
 		await zip.save(filePath);
@@ -243,7 +257,7 @@ class _class {
 				logger.log(config.sync.upload);
 			}
 			try {
-				childProcess.execSync(config.sync.upload);
+				_execChildProcess(config.sync.upload);
 			} catch (err) {
 				throw new Error("Sync upload command failed");
 			}
@@ -260,6 +274,10 @@ class _class {
 		}
 		await fs.writeFile(filePath, CryptoProvider.randomBytes(stat.size));
 		await fs.rm(filePath);
+	}
+
+	_execChildProcess(command) {
+		childProcess.execSync(command);
 	}
 
 	_prompt(question, options) {

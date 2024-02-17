@@ -173,7 +173,7 @@ class _class extends BaseInterface {
 		if (passphrase == "") {
 			logger.warn("WARN: Empty password specified - the keystore will not be encrypted!");
 		} else {
-			logger.log("Passphrase accepted.");
+			logger.log("Passphrase accepted");
 		}
 		return passphrase;
 	}
