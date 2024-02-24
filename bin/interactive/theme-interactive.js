@@ -47,6 +47,8 @@ class ThemeInteractive extends Theme {
 		}),
 		ScrollBar: new Style({
 			border: BORDER.SINGLE,
+			borderColor: COLORS.FG.MAGENTA,
+			labelColor: COLORS.FG.CYAN,
 			trackCharacter: String.fromCharCode(0x2592),
 			trackColor: COLORS.FG.WHITE,
 			thumbCharacter: String.fromCharCode(0x2588),

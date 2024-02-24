@@ -16,12 +16,12 @@
 	},
 	"license": "GPL-3.0",
 	"dependencies": {
-		"deluxe-cli": "0.3.0",
-		"jszip": "^3.10.1"
+		"deluxe-cli": "0.4.0",
+		"jszip": "3.10.1"
 	},
 	"devDependencies": {
-		"@angablue/exe": "^1.2.0",
-		"rimraf": "^4.0.5"
+		"@angablue/exe": "1.2.0",
+		"rimraf": "4.0.5"
 	},
 	"repository": {
 		"type": "git",

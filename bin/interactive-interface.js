@@ -2,7 +2,7 @@
 
 import childProcess from "child_process";
 
-import DeluxeCLI, {Screen, Window, Input, Button, Text, List, ORIGIN, BORDER, CURSOR, Logger} from "deluxe-cli";
+import DeluxeCLI, {Screen, Input, Text, List, ScrollBar, ORIGIN, BORDER, CURSOR, Logger} from "deluxe-cli";
 
 import BaseInterface from "./base-interface.js";
 import ThemeInteractive from "./interactive/theme-interactive.js";
@@ -29,16 +29,17 @@ class _class extends BaseInterface {
 		this._setStatus = this._setStatus.bind(this);
 		this._doExit = this._doExit.bind(this);
 		this._doStore = this._doStore.bind(this);
+		this._doList = this._doList.bind(this);
 		this._toggleLog = this._toggleLog.bind(this);
 		this._doAbout = this._doAbout.bind(this);
 		this._showAboutWindow = this._showAboutWindow.bind(this);
 	}
 
 	async execute(args) {
-		const {logger, _setStatus, _doExit, _doStore, _toggleLog, _doAbout} = this;
+		const {logger, _setStatus, _doExit, _doStore, _doList, _toggleLog, _doAbout} = this;
 
-		const listRootOptions = new List({
-			id: "listRootOptions",
+		const listMenu = new List({
+			id: "listMenu",
 			label: " Main Menu ",
 			position: List.DEFAULT_POSITION.extend({
 				paddingTop: 1,
@@ -95,13 +96,17 @@ class _class extends BaseInterface {
 						_doStore();
 						break;
 
+					case "list":
+						_doList();
+						break;
+
 					case "more...":
-						const newItems = [...listRootOptions.items];
+						const newItems = [...listMenu.items];
 						newItems.pop(); //Remove "More..."
 						newItems.push("Erase", "Nuke", "Log", "About");
-						listRootOptions.items = newItems;
-						listRootOptions.activeIndex = newItems.length - 4;
-						listRootOptions.selectedIndex = -1;
+						listMenu.items = newItems;
+						listMenu.activeIndex = newItems.length - 4;
+						listMenu.selectedIndex = -1;
 						break;
 
 					case "log":
@@ -113,6 +118,91 @@ class _class extends BaseInterface {
 
 					case "about":
 						_doAbout();
+						break;
+				}
+			},
+			onKeyPress: (str, key) => {
+				//On escape jump to exit, if on exit then doExit
+				if (key.escape) {
+					if (listMenu.selectedIndex === 0) {
+						_doExit();
+					} else {
+						listMenu.selectedIndex = 0;
+					}
+				}
+			}
+		});
+
+		const listKeys = new List({
+			id: "listKeys",
+			position: List.DEFAULT_POSITION.extend({
+				paddingTop: 1,
+				paddingRight: 2,
+				paddingBottom: 1,
+				paddingLeft: 2
+			}),
+			style: List.DEFAULT_STYLE.extend({
+				border: BORDER.NONE
+			}),
+			activeIndex: 0,
+			items: ["< Back"],
+			onChange: ({activeIndex, activeItem}) => {
+				switch (activeItem.toLowerCase()) {
+					case "< back":
+						_setStatus(`Go back.`);
+						break;
+					default:
+						_setStatus("Select for further actions.");
+						break;
+				}
+			}
+		});
+		const sbListKeys = new ScrollBar({
+			id: "sbListKeys",
+			focusable: false,
+			position: ScrollBar.DEFAULT_POSITION.extend({
+				marginBottom: 1,
+				marginRight: 1,
+				width: "50%",
+				height: "100%"
+			}),
+			label: " Keys ",
+			children: [listKeys]
+		});
+		const listActions = new List({
+			id: "listActions",
+			position: List.DEFAULT_POSITION.extend({
+				originX: ORIGIN.X.RIGHT,
+				labelOriginX: ORIGIN.X.LEFT,
+				paddingTop: 1,
+				paddingRight: 2,
+				paddingBottom: 1,
+				paddingLeft: 2,
+				marginLeft: 1,
+				width: "50%"
+			}),
+			label: " Actions ",
+			activeIndex: 0,
+			items: ["< Back", "View", "Open", "Edit", "Delete", "Export"],
+			onChange: ({activeIndex, activeItem}) => {
+				switch (activeItem.toLowerCase()) {
+					case "< back":
+						_setStatus(`Go back.`);
+						break;
+					case "view":
+						_setStatus(`View the value.`);
+						break;
+					case "open":
+						_setStatus(`Open with system default.`);
+						break;
+					case "edit":
+						_setStatus(`Edit the value.`);
+						break;
+					case "delete":
+						_setStatus(`Delete the key.`);
+						break;
+					case "export":
+						_setStatus(`Export the data.`);
 						break;
 				}
 			}
@@ -144,17 +234,23 @@ class _class extends BaseInterface {
 				border: BORDER.DOUBLE
 			}),
 			label: ` ${packageName} `,
-			children: [listRootOptions, txtStatus]
+			children: [listMenu, txtStatus]
 		});
 
 		this.theme = new ThemeInteractive();
 		this.components = {
-			screen: screenMain,
-			status: txtStatus
+			listMenu,
+			listKeys,
+			sbListKeys,
+			listActions,
+			status: txtStatus,
+			screen: screenMain
 		};
 
 		const _this = this;
 		(function initialize() {
+			_this.theme.applyToComponent(sbListKeys);
+			_this.theme.applyToComponent(listActions);
 			_this.theme.applyToComponent(screenMain);
 
 			DeluxeCLI.debug = true;
@@ -249,6 +345,77 @@ class _class extends BaseInterface {
 			_setStatus(err.message);
 			return;
 		}
+	}
+
+	async _doList() {
+		const {logger, theme, components, _setStatus} = this;
+		const {listMenu, listKeys, sbListKeys, listActions, screen} = components;
+
+		let list = [];
+		try {
+			list = await this.list();
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+			return;
+		}
+
+		if (list.length == 0) {
+			_setStatus(`Keystore is empty.`);
+			return;
+		}
+		function backToMenu() {
+			listActions.remove();
+			sbListKeys.remove();
+			screen.addChild(listMenu);
+			DeluxeCLI.focus(listMenu);
+		}
+		function backToKeys() {
+			DeluxeCLI.focus(listKeys);
+			listActions.remove();
+		}
+
+		listKeys.onSelect = ({selectedIndex, selectedItem}) => {
+			if (selectedIndex === 0) {
+				backToMenu();
+				return;
+			}
+			//TODO: Modify actions based on extension
+
+			listActions.onBlur = () => {
+				//TODO: FIX THIS AS IT CAUSES A BUG
+				//backToKeys();
+			};
+			screen.addChild(listActions);
+			DeluxeCLI.focus(listActions);
+		};
+		listKeys.onKeyPress = (str, key) => {
+			if (key.name === "escape") {
+				backToMenu();
+				return;
+			}
+		};
+		listKeys.items = [listKeys.items[0], ...list];
+
+		listActions.onKeyPress = (str, key) => {
+			if (key.name === "escape") {
+				backToKeys();
+				return;
+			}
+		};
+		listActions.onSelect = ({selectedIndex, selectedItem}) => {
+			if (selectedIndex === 0) {
+				backToKeys();
+				return;
+			}
+		};
+
+		//Show the list
+		listMenu.remove();
+		screen.addChild(sbListKeys);
+		DeluxeCLI.focus(listKeys);
+
+		_setStatus(`Listed ${list.length} keys.`);
 	}
 
 	async _doAbout(options) {
