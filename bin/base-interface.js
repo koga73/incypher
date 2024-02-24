@@ -34,8 +34,8 @@ class _class {
 		this._execChildProcess = this._execChildProcess.bind(this);
 
 		this._prompt = this._prompt.bind(this);
-		this._requestPass = this._requestPass.bind(this);
-		this._resolvePass = this._resolvePass.bind(this);
+		this._promptPassExisting = this._promptPassExisting.bind(this);
+		this._promptPassNew = this._promptPassNew.bind(this);
 
 		this.zip = new CryptoZip(
 			{
@@ -208,7 +208,7 @@ class _class {
 	}
 
 	async _readStore() {
-		const {zip, filePath, config, logger, _requestPass, _execChildProcess} = this;
+		const {zip, filePath, config, logger, _promptPassExisting, _execChildProcess} = this;
 
 		if (config.sync.enabled) {
 			logger.log("SYNC DOWNLOAD");
@@ -228,7 +228,7 @@ class _class {
 
 		let pass = null;
 		try {
-			pass = success ? (zip.isEncrypted ? await _requestPass() : "") : null;
+			pass = success ? (zip.isEncrypted ? await _promptPassExisting() : "") : null;
 			await zip.decrypt(pass);
 		} catch (err) {
 			logger.error(err);
@@ -239,10 +239,10 @@ class _class {
 	}
 
 	async _writeStore(pass = null) {
-		const {zip, filePath, config, logger, _resolvePass, _execChildProcess} = this;
+		const {zip, filePath, config, logger, _promptPassNew, _execChildProcess} = this;
 
 		try {
-			await zip.encrypt(pass !== null ? pass : await _resolvePass());
+			await zip.encrypt(pass !== null ? pass : await _promptPassNew());
 		} catch (err) {
 			logger.error(err);
 			throw new Error("Failed to encrypt keystore");
@@ -284,12 +284,12 @@ class _class {
 		throw new Error("_prompt - Not implemented");
 	}
 
-	async _requestPass(options) {
-		throw new Error("_requestPass - Not implemented");
+	async _promptPassExisting(options) {
+		throw new Error("_promptPassExisting - Not implemented");
 	}
 
-	async _resolvePass(options) {
-		throw new Error("_resolvePass - Not implemented");
+	async _promptPassNew(options) {
+		throw new Error("_promptPassNew - Not implemented");
 	}
 
 	async execute(args) {

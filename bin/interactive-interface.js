@@ -7,6 +7,7 @@ import DeluxeCLI, {Screen, Window, Input, Button, Text, List, ORIGIN, BORDER, CU
 import BaseInterface from "./base-interface.js";
 import ThemeInteractive from "./interactive/theme-interactive.js";
 import WindowPrompt from "./interactive/window-prompt.js";
+import WindowAbout from "./interactive/window-about.js";
 
 import packageJson from "../package.json" assert {type: "json"};
 const {name: packageName, version: packageVersion, author: packageAuthor} = packageJson;
@@ -23,14 +24,18 @@ class _class extends BaseInterface {
 		this.components = null;
 
 		this._isComplete = false;
+		this._showingLog = false;
 
 		this._setStatus = this._setStatus.bind(this);
 		this._doExit = this._doExit.bind(this);
 		this._doStore = this._doStore.bind(this);
+		this._toggleLog = this._toggleLog.bind(this);
+		this._doAbout = this._doAbout.bind(this);
+		this._showAboutWindow = this._showAboutWindow.bind(this);
 	}
 
 	async execute(args) {
-		const {_setStatus, _doExit, _doStore} = this;
+		const {logger, _setStatus, _doExit, _doStore, _toggleLog, _doAbout} = this;
 
 		const listRootOptions = new List({
 			id: "listRootOptions",
@@ -42,7 +47,7 @@ class _class extends BaseInterface {
 				paddingLeft: 2
 			}),
 			activeIndex: 0,
-			items: ["Exit", "Store", "List", "Import", "Export", "Config", "Passphrase", "More..."],
+			items: ["Exit", "Store", "List", "Import", "Config", "Passphrase", "More..."],
 			onChange: ({activeIndex, activeItem}) => {
 				switch (activeItem.toLowerCase()) {
 					case "exit":
@@ -72,6 +77,12 @@ class _class extends BaseInterface {
 					case "nuke":
 						_setStatus(`Securely erase the entire keystore.`);
 						break;
+					case "log":
+						_setStatus(`View the log.`);
+						break;
+					case "about":
+						_setStatus(`About this program.`);
+						break;
 				}
 			},
 			onSelect: ({selectedIndex, selectedItem}) => {
@@ -87,10 +98,21 @@ class _class extends BaseInterface {
 					case "more...":
 						const newItems = [...listRootOptions.items];
 						newItems.pop(); //Remove "More..."
-						newItems.push("Erase", "Nuke");
+						newItems.push("Erase", "Nuke", "Log", "About");
 						listRootOptions.items = newItems;
-						listRootOptions.activeIndex = newItems.length - 2;
+						listRootOptions.activeIndex = newItems.length - 4;
 						listRootOptions.selectedIndex = -1;
+						break;
+
+					case "log":
+						_toggleLog();
+						logger.log();
+						logger.log(`Press [escape] to close the log.`);
+						logger.log(`Note: You can access the log at any time by pressing [ctrl+l].`);
+						break;
+
+					case "about":
+						_doAbout();
 						break;
 				}
 			}
@@ -121,7 +143,7 @@ class _class extends BaseInterface {
 			style: Screen.DEFAULT_STYLE.extend({
 				border: BORDER.DOUBLE
 			}),
-			label: ` ${packageName} v${packageVersion} `,
+			label: ` ${packageName} `,
 			children: [listRootOptions, txtStatus]
 		});
 
@@ -136,20 +158,17 @@ class _class extends BaseInterface {
 			_this.theme.applyToComponent(screenMain);
 
 			DeluxeCLI.debug = true;
-			DeluxeCLI.initialize();
+			DeluxeCLI.initialize({exitOnEscape: false});
 			DeluxeCLI.clear();
 			DeluxeCLI.render(screenMain);
 
-			let showingLog = false;
 			DeluxeCLI.onKeyPress = (str, key) => {
 				//ctrl+l to view render log
 				if (key.ctrl === true && key.name === "l") {
-					showingLog = !showingLog;
-					if (showingLog) {
-						DeluxeCLI.showLog(_this.logger.memory);
-					} else {
-						DeluxeCLI.hideLog();
-					}
+					_this._toggleLog();
+				}
+				if (key.escape && _this._showingLog) {
+					_this._toggleLog();
 				}
 			};
 		})();
@@ -180,6 +199,15 @@ class _class extends BaseInterface {
 
 	_setStatus(value) {
 		this.components.status.value = value;
+	}
+
+	_toggleLog() {
+		this._showingLog = !this._showingLog;
+		if (this._showingLog) {
+			DeluxeCLI.showLog(this.logger.memory);
+		} else {
+			DeluxeCLI.hideLog();
+		}
 	}
 
 	_doExit() {
@@ -223,6 +251,35 @@ class _class extends BaseInterface {
 		}
 	}
 
+	async _doAbout(options) {
+		const {_showAboutWindow} = this;
+
+		try {
+			await _showAboutWindow(options);
+		} catch (err) {
+			//Do nothing
+		}
+	}
+
+	_showAboutWindow(options) {
+		const {theme, components} = this;
+		const {screen} = components;
+
+		return new Promise((resolve, reject) => {
+			const about = new WindowAbout({
+				id: "windowAbout",
+				...options,
+				onSubmit: resolve,
+				onClose: () => {
+					reject(new Error("User closed."));
+				}
+			});
+			theme.applyToComponent(about.component);
+			screen.addChild(about.component);
+			about.focus();
+		});
+	}
+
 	_execChildProcess(command) {
 		const {logger} = this;
 		DeluxeCLI.showLog(logger.memory);
@@ -252,7 +309,7 @@ class _class extends BaseInterface {
 		});
 	}
 
-	async _requestPass(options) {
+	async _promptPassExisting(options) {
 		const {_prompt} = this;
 
 		return await _prompt("Please enter your passphrase to unlock the keystore", {
@@ -266,8 +323,8 @@ class _class extends BaseInterface {
 		});
 	}
 
-	async _resolvePass(options) {
-		const {_setStatus, _prompt} = this;
+	async _promptPassNew(options) {
+		const {_setStatus, _prompt, _promptPassNew} = this;
 
 		const passphrase = await _prompt("Create a passphrase to encrypt the keystore", {
 			id: "windowPass",
@@ -290,7 +347,7 @@ class _class extends BaseInterface {
 		if (passphrase != confirm) {
 			_setStatus("Passphrase does not match.");
 			//Recycle
-			return await _resolvePass(options);
+			return await _promptPassNew(options);
 		}
 		if (passphrase == "") {
 			_setStatus("WARN: Empty password specified - the keystore will not be encrypted!");

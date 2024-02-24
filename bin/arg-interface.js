@@ -156,13 +156,13 @@ class _class extends BaseInterface {
 		});
 	}
 
-	async _requestPass(options) {
+	async _promptPassExisting(options) {
 		const {_prompt} = this;
 
 		return await _prompt("Enter the passphrase", {...options, hidden: true});
 	}
 
-	async _resolvePass(options) {
+	async _promptPassNew(options) {
 		const {_prompt, logger} = this;
 
 		const passphrase = await _prompt("Create a passphrase", {...options, hidden: true});

@@ -1,6 +1,11 @@
 import {Theme, Style, BORDER, COLORS} from "deluxe-cli";
 
 class ThemeInteractive extends Theme {
+	static COLORS = {
+		LABEL: COLORS.FG.CYAN,
+		TEXT: COLORS.FG.WHITE
+	};
+
 	static DEFAULT_MAP = {
 		Screen: new Style({
 			backgroundColor: COLORS.BG.BLACK,
