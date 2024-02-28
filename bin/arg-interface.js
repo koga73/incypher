@@ -106,6 +106,7 @@ class _class extends BaseInterface {
 
 			case "config":
 				this.openConfig();
+				process.exit(0);
 				break;
 
 			case "?":

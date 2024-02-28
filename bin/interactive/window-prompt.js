@@ -8,12 +8,13 @@ class WindowPrompt {
 		userClosable = true,
 		heading = "",
 		inputLabel = "",
+		inputValue = "",
 		inputMask = null,
 		btnValue = "Submit",
 		onSubmit = null,
 		onClose = null
 	}) {
-		let input = "";
+		let input = inputValue;
 
 		const txtHeading = new Text({
 			id: `${id}_heading`,
@@ -30,6 +31,7 @@ class WindowPrompt {
 				marginBottom: 3
 			}),
 			label: inputLabel,
+			value: inputValue,
 			mask: inputMask,
 			onChange: (value) => {
 				input = value;

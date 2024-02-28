@@ -5,6 +5,7 @@ import childProcess from "child_process";
 
 //Local imports
 import CryptoZip from "../src/crypto-zip.js";
+import CryptoProvider from "../src/crypto-provider.js";
 import Utils from "../src/utils.js";
 
 class _class {
@@ -179,11 +180,11 @@ class _class {
 	}
 
 	async nuke() {
-		const {defaultDir, filePath, logger, secureErase} = this;
+		const {defaultDir, filePath, logger, _secureErase} = this;
 
 		if (await Utils.fsExists(filePath)) {
 			logger.log("ERASE", filePath);
-			await secureErase(filePath);
+			await _secureErase(filePath);
 		}
 		if (await Utils.fsExists(defaultDir)) {
 			const nukeFiles = await fs.readdir(defaultDir);
@@ -191,7 +192,7 @@ class _class {
 				nukeFiles.map((fileName) => {
 					const filePath = path.join(defaultDir, fileName);
 					logger.log("ERASE", filePath);
-					return secureErase(filePath);
+					return _secureErase(filePath);
 				})
 			);
 			logger.log("DELETE", defaultDir);
@@ -204,7 +205,6 @@ class _class {
 
 		logger.log("OPEN", configFile);
 		childProcess.execSync(configFile);
-		process.exit(0);
 	}
 
 	async _readStore() {

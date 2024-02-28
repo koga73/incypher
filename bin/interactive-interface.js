@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import childProcess from "child_process";
+import path from "path";
 
 import DeluxeCLI, {Screen, Input, Text, List, ScrollBar, ORIGIN, BORDER, CURSOR, Logger} from "deluxe-cli";
 
@@ -8,6 +9,7 @@ import BaseInterface from "./base-interface.js";
 import ThemeInteractive from "./interactive/theme-interactive.js";
 import WindowPrompt from "./interactive/window-prompt.js";
 import WindowAbout from "./interactive/window-about.js";
+import Utils from "../src/utils.js";
 
 import packageJson from "../package.json" assert {type: "json"};
 const {name: packageName, version: packageVersion, author: packageAuthor} = packageJson;
@@ -30,13 +32,18 @@ class _class extends BaseInterface {
 		this._doExit = this._doExit.bind(this);
 		this._doStore = this._doStore.bind(this);
 		this._doList = this._doList.bind(this);
+		this._doImport = this._doImport.bind(this);
+		this._doConfig = this._doConfig.bind(this);
+		this._doPassphrase = this._doPassphrase.bind(this);
+		this._doErase = this._doErase.bind(this);
+		this._doNuke = this._doNuke.bind(this);
 		this._toggleLog = this._toggleLog.bind(this);
 		this._doAbout = this._doAbout.bind(this);
 		this._showAboutWindow = this._showAboutWindow.bind(this);
 	}
 
 	async execute(args) {
-		const {logger, _setStatus, _doExit, _doStore, _doList, _toggleLog, _doAbout} = this;
+		const {logger, _setStatus, _doExit, _doStore, _doList, _doImport, _doConfig, _doPassphrase, _doErase, _doNuke, _toggleLog, _doAbout} = this;
 
 		const listMenu = new List({
 			id: "listMenu",
@@ -98,6 +105,26 @@ class _class extends BaseInterface {
 
 					case "list":
 						_doList();
+						break;
+
+					case "import":
+						_doImport();
+						break;
+
+					case "config":
+						_doConfig();
+						break;
+
+					case "passphrase":
+						_doPassphrase();
+						break;
+
+					case "erase":
+						_doErase();
+						break;
+
+					case "nuke":
+						_doNuke();
 						break;
 
 					case "more...":
@@ -179,7 +206,8 @@ class _class extends BaseInterface {
 				paddingBottom: 1,
 				paddingLeft: 2,
 				marginLeft: 1,
-				width: "50%"
+				width: "50%",
+				focusTrap: true
 			}),
 			label: " Actions ",
 			activeIndex: 0,
@@ -308,13 +336,14 @@ class _class extends BaseInterface {
 
 	_doExit() {
 		const _this = this;
+		//Timeout so we can see the last status
 		setTimeout(() => {
 			_this._isComplete = true;
 		}, 250);
 	}
 
 	async _doStore() {
-		const {logger, _setStatus, _prompt} = this;
+		const {logger, _setStatus, _prompt, store: _store} = this;
 
 		let key, value;
 		try {
@@ -338,7 +367,7 @@ class _class extends BaseInterface {
 		}
 
 		try {
-			await this.store(key, value);
+			await _store(key, value);
 			_setStatus(`Stored "${key}" successfully.`);
 		} catch (err) {
 			logger.error(err);
@@ -348,7 +377,8 @@ class _class extends BaseInterface {
 	}
 
 	async _doList() {
-		const {logger, theme, components, _setStatus} = this;
+		const {logger, components, _setStatus, _prompt} = this;
+		const {store: _store, view: _view, open: _open, delete: _delete, export: _export} = this;
 		const {listMenu, listKeys, sbListKeys, listActions, screen} = components;
 
 		let list = [];
@@ -375,17 +405,20 @@ class _class extends BaseInterface {
 			listActions.remove();
 		}
 
+		let selectedKey = null;
 		listKeys.onSelect = ({selectedIndex, selectedItem}) => {
 			if (selectedIndex === 0) {
 				backToMenu();
 				return;
 			}
-			//TODO: Modify actions based on extension
+			selectedKey = selectedItem;
 
-			listActions.onBlur = () => {
-				//TODO: FIX THIS AS IT CAUSES A BUG
-				//backToKeys();
-			};
+			//Change the actions based on whether we have a file extension
+			if (/\.\w+$/i.test(selectedItem)) {
+				listActions.items = ["< Back", "Open", "Delete", "Export"];
+			} else {
+				listActions.items = ["< Back", "View", "Open", "Edit", "Delete", "Export"];
+			}
 			screen.addChild(listActions);
 			DeluxeCLI.focus(listActions);
 		};
@@ -403,11 +436,93 @@ class _class extends BaseInterface {
 				return;
 			}
 		};
-		listActions.onSelect = ({selectedIndex, selectedItem}) => {
+		listActions.onSelect = async ({selectedIndex, selectedItem}) => {
 			if (selectedIndex === 0) {
 				backToKeys();
 				return;
 			}
+			switch (selectedItem.toLowerCase()) {
+				case "view":
+					try {
+						_setStatus(`Viewing "${selectedKey}".`);
+						const content = await _view(selectedKey);
+						//TODO: Show the content in a new window
+					} catch (err) {
+						logger.error(err);
+						_setStatus(err.message);
+						return;
+					}
+					break;
+				case "open":
+					try {
+						_setStatus(`Opening "${selectedKey}".`);
+						await _open(selectedKey);
+						_setStatus(`Closed "${selectedKey}".`);
+					} catch (err) {
+						logger.error(err);
+						_setStatus(err.message);
+						return;
+					}
+					break;
+				case "edit":
+					let value;
+					try {
+						_setStatus(`Storing new value for "${selectedKey}".`);
+						value = await _prompt(`Please enter the value for "${selectedKey}"`, {
+							id: "windowStoreVal",
+							inputLabel: " Value ",
+							btnValue: "Done",
+							windowLabel: " Edit key/value "
+						});
+					} catch (err) {
+						_setStatus(err.message);
+						return;
+					}
+					try {
+						await _store(selectedKey, value);
+						_setStatus(`Stored "${selectedKey}" successfully.`);
+					} catch (err) {
+						logger.error(err);
+						_setStatus(err.message);
+						return;
+					}
+					break;
+				case "delete":
+					try {
+						await _delete(selectedKey);
+						_setStatus(`Deleted "${selectedKey}".`);
+					} catch (err) {
+						logger.error(err);
+						_setStatus(err.message);
+						return;
+					}
+					break;
+				case "export":
+					let filePath;
+					try {
+						filePath = await _prompt(`Please enter the export file path for "${selectedKey}"`, {
+							id: "windowExportFile",
+							inputLabel: " File path ",
+							inputValue: Utils.ensureExtension(path.join(process.cwd(), path.parse(selectedKey).base)),
+							btnValue: "Done",
+							windowLabel: " Export file "
+						});
+					} catch (err) {
+						_setStatus(err.message);
+						return;
+					}
+					try {
+						_setStatus(`Exporting "${selectedKey}" to "${filePath}".`);
+						await _export(selectedKey, filePath);
+						_setStatus(`Exported "${filePath}".`);
+					} catch (err) {
+						logger.error(err);
+						_setStatus(err.message);
+						return;
+					}
+					break;
+			}
+			DeluxeCLI.focus(listActions);
 		};
 
 		//Show the list
@@ -416,6 +531,123 @@ class _class extends BaseInterface {
 		DeluxeCLI.focus(listKeys);
 
 		_setStatus(`Listed ${list.length} keys.`);
+	}
+
+	async _doImport() {
+		const {logger, _setStatus, _prompt, import: _import} = this;
+
+		let filePath, key;
+		try {
+			filePath = await _prompt(`Please enter the file path to import`, {
+				id: "windowImportFile",
+				inputLabel: " File path ",
+				btnValue: "Next",
+				windowLabel: " Import file "
+			});
+			key = await _prompt(`Please enter a name for the key entry`, {
+				id: "windowStoreKey",
+				inputLabel: " Key name ",
+				inputValue: path.parse(filePath).base,
+				btnValue: "Import",
+				windowLabel: " Import file "
+			});
+		} catch (err) {
+			_setStatus(err.message);
+			return;
+		}
+		try {
+			_setStatus(`Importing "${filePath}" to "${key}".`);
+			await _import(filePath, key);
+			_setStatus(`Imported "${key}".`);
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+			return;
+		}
+	}
+
+	async _doConfig() {
+		const {logger, configFile, _setStatus, openConfig: _openConfig, _doExit} = this;
+		try {
+			_setStatus(`Opening "${configFile}".`);
+			_openConfig();
+			_setStatus(`Closed. Please reload to apply changes.`);
+			_doExit();
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+			return;
+		}
+	}
+
+	async _doPassphrase() {
+		const {logger, password: _password, _setStatus} = this;
+		try {
+			_setStatus(`Changing passphrase.`);
+			await _password();
+			_setStatus(`Changed passphrase.`);
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+			return;
+		}
+	}
+
+	async _doErase() {
+		const {logger, erase: _erase, _setStatus, _prompt} = this;
+
+		let filePath;
+		try {
+			filePath = await _prompt(`Please enter the file path to erase`, {
+				id: "windowEraseFile",
+				inputLabel: " File path ",
+				btnValue: "Erase",
+				windowLabel: " Erase file "
+			});
+		} catch (err) {
+			_setStatus(err.message);
+			return;
+		}
+		try {
+			_setStatus(`Erasing "${filePath}".`);
+			await _erase(filePath);
+			_setStatus(`Erased "${filePath}".`);
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+			return;
+		}
+	}
+
+	async _doNuke() {
+		const {logger, nuke: _nuke, _setStatus, _prompt, _doExit} = this;
+
+		let confirm;
+		try {
+			confirm = await _prompt(`Are you sure you want to securely erase the entire keystore?`, {
+				id: "windowNukeConfirm",
+				inputLabel: ` Type "yes" to confirm`,
+				btnValue: "Confirm",
+				windowLabel: " Nuke "
+			});
+			if (confirm.toLowerCase() !== "yes") {
+				_setStatus(`Aborted.`);
+				return;
+			}
+		} catch (err) {
+			_setStatus(err.message);
+			return;
+		}
+		try {
+			_setStatus(`Nuking the keystore.`);
+			await _nuke();
+			_setStatus(`Nuked the keystore.`);
+			_doExit();
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+			return;
+		}
 	}
 
 	async _doAbout(options) {
