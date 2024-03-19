@@ -3,7 +3,8 @@ import {Theme, Style, BORDER, COLORS} from "deluxe-cli";
 class ThemeInteractive extends Theme {
 	static COLORS = {
 		LABEL: COLORS.FG.CYAN,
-		TEXT: COLORS.FG.WHITE
+		TEXT: COLORS.FG.WHITE,
+		CONTENT: COLORS.FG.YELLOW
 	};
 
 	static DEFAULT_MAP = {
@@ -63,6 +64,17 @@ class ThemeInteractive extends Theme {
 			backgroundColor: COLORS.BG.RED,
 			color: COLORS.FG.BLACK,
 			borderColor: COLORS.FG.WHITE,
+			labelColor: COLORS.FG.WHITE
+		}),
+		windowView: new Style({
+			labelColor: COLORS.FG.WHITE,
+			borderColor: COLORS.FG.MAGENTA
+		}),
+		windowView_content: new Style({
+			border: BORDER.SINGLE,
+			borderColor: COLORS.FG.BLACK,
+			borderBackgroundColor: COLORS.BG.YELLOW,
+			color: COLORS.FG.YELLOW,
 			labelColor: COLORS.FG.WHITE
 		})
 	};

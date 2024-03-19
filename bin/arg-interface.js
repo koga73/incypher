@@ -20,6 +20,7 @@ class _class extends BaseInterface {
 		this.logger = console;
 	}
 
+	//Override
 	async execute(args) {
 		const {filePath, defaultDir} = this;
 
@@ -129,6 +130,7 @@ class _class extends BaseInterface {
 		return 0;
 	}
 
+	//Override
 	_prompt(question, options) {
 		const rl = readline.createInterface({
 			input: process.stdin,
@@ -157,12 +159,14 @@ class _class extends BaseInterface {
 		});
 	}
 
+	//Override
 	async _promptPassExisting(options) {
 		const {_prompt} = this;
 
 		return await _prompt("Enter the passphrase", {...options, hidden: true});
 	}
 
+	//Override
 	async _promptPassNew(options) {
 		const {_prompt, logger} = this;
 

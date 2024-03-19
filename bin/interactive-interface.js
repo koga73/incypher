@@ -4,11 +4,13 @@ import childProcess from "child_process";
 import path from "path";
 
 import DeluxeCLI, {Screen, Input, Text, List, ScrollBar, ORIGIN, BORDER, CURSOR, Logger} from "deluxe-cli";
+import Clipboard from "clipboardy";
 
 import BaseInterface from "./base-interface.js";
 import ThemeInteractive from "./interactive/theme-interactive.js";
 import WindowPrompt from "./interactive/window-prompt.js";
 import WindowAbout from "./interactive/window-about.js";
+import WindowView from "./interactive/window-view.js";
 import Utils from "../src/utils.js";
 
 import packageJson from "../package.json" assert {type: "json"};
@@ -37,11 +39,19 @@ class _class extends BaseInterface {
 		this._doPassphrase = this._doPassphrase.bind(this);
 		this._doErase = this._doErase.bind(this);
 		this._doNuke = this._doNuke.bind(this);
-		this._toggleLog = this._toggleLog.bind(this);
 		this._doAbout = this._doAbout.bind(this);
+		this._doCopy = this._doCopy.bind(this);
+		this._doView = this._doView.bind(this);
+		this._doOpen = this._doOpen.bind(this);
+		this._doEdit = this._doEdit.bind(this);
+		this._doDelete = this._doDelete.bind(this);
+		this._doExport = this._doExport.bind(this);
+		this._toggleLog = this._toggleLog.bind(this);
 		this._showAboutWindow = this._showAboutWindow.bind(this);
+		this._showViewWindow = this._showViewWindow.bind(this);
 	}
 
+	//Override
 	async execute(args) {
 		const {logger, _setStatus, _doExit, _doStore, _doList, _doImport, _doConfig, _doPassphrase, _doErase, _doNuke, _toggleLog, _doAbout} = this;
 
@@ -98,35 +108,27 @@ class _class extends BaseInterface {
 					case "exit":
 						_doExit();
 						break;
-
 					case "store":
 						_doStore();
 						break;
-
 					case "list":
 						_doList();
 						break;
-
 					case "import":
 						_doImport();
 						break;
-
 					case "config":
 						_doConfig();
 						break;
-
 					case "passphrase":
 						_doPassphrase();
 						break;
-
 					case "erase":
 						_doErase();
 						break;
-
 					case "nuke":
 						_doNuke();
 						break;
-
 					case "more...":
 						const newItems = [...listMenu.items];
 						newItems.pop(); //Remove "More..."
@@ -135,14 +137,12 @@ class _class extends BaseInterface {
 						listMenu.activeIndex = newItems.length - 4;
 						listMenu.selectedIndex = -1;
 						break;
-
 					case "log":
-						_toggleLog();
 						logger.log();
 						logger.log(`Press [escape] to close the log.`);
-						logger.log(`Note: You can access the log at any time by pressing [ctrl+l].`);
+						logger.log(`You can access the log at any time by pressing [ctrl+l].`);
+						_toggleLog();
 						break;
-
 					case "about":
 						_doAbout();
 						break;
@@ -377,8 +377,9 @@ class _class extends BaseInterface {
 	}
 
 	async _doList() {
-		const {logger, components, _setStatus, _prompt} = this;
+		const {logger, components, _setStatus} = this;
 		const {store: _store, view: _view, open: _open, delete: _delete, export: _export} = this;
+		const {_doCopy, _doView, _doOpen, _doEdit, _doDelete, _doExport} = this;
 		const {listMenu, listKeys, sbListKeys, listActions, screen} = components;
 
 		let list = [];
@@ -417,7 +418,7 @@ class _class extends BaseInterface {
 			if (/\.\w+$/i.test(selectedItem)) {
 				listActions.items = ["< Back", "Open", "Delete", "Export"];
 			} else {
-				listActions.items = ["< Back", "View", "Open", "Edit", "Delete", "Export"];
+				listActions.items = ["< Back", "Copy", "View", "Open", "Edit", "Delete", "Export"];
 			}
 			screen.addChild(listActions);
 			DeluxeCLI.focus(listActions);
@@ -442,84 +443,24 @@ class _class extends BaseInterface {
 				return;
 			}
 			switch (selectedItem.toLowerCase()) {
+				case "copy":
+					await _doCopy(selectedKey);
+					break;
 				case "view":
-					try {
-						_setStatus(`Viewing "${selectedKey}".`);
-						const content = await _view(selectedKey);
-						//TODO: Show the content in a new window
-					} catch (err) {
-						logger.error(err);
-						_setStatus(err.message);
-						return;
-					}
+					await _doView(selectedKey);
 					break;
 				case "open":
-					try {
-						_setStatus(`Opening "${selectedKey}".`);
-						await _open(selectedKey);
-						_setStatus(`Closed "${selectedKey}".`);
-					} catch (err) {
-						logger.error(err);
-						_setStatus(err.message);
-						return;
-					}
+					await _doOpen(selectedKey);
 					break;
 				case "edit":
-					let value;
-					try {
-						_setStatus(`Storing new value for "${selectedKey}".`);
-						value = await _prompt(`Please enter the value for "${selectedKey}"`, {
-							id: "windowStoreVal",
-							inputLabel: " Value ",
-							btnValue: "Done",
-							windowLabel: " Edit key/value "
-						});
-					} catch (err) {
-						_setStatus(err.message);
-						return;
-					}
-					try {
-						await _store(selectedKey, value);
-						_setStatus(`Stored "${selectedKey}" successfully.`);
-					} catch (err) {
-						logger.error(err);
-						_setStatus(err.message);
-						return;
-					}
+					await _doEdit(selectedKey);
 					break;
 				case "delete":
-					try {
-						await _delete(selectedKey);
-						_setStatus(`Deleted "${selectedKey}".`);
-					} catch (err) {
-						logger.error(err);
-						_setStatus(err.message);
-						return;
-					}
+					await _doDelete(selectedKey);
+					backToKeys();
 					break;
 				case "export":
-					let filePath;
-					try {
-						filePath = await _prompt(`Please enter the export file path for "${selectedKey}"`, {
-							id: "windowExportFile",
-							inputLabel: " File path ",
-							inputValue: Utils.ensureExtension(path.join(process.cwd(), path.parse(selectedKey).base)),
-							btnValue: "Done",
-							windowLabel: " Export file "
-						});
-					} catch (err) {
-						_setStatus(err.message);
-						return;
-					}
-					try {
-						_setStatus(`Exporting "${selectedKey}" to "${filePath}".`);
-						await _export(selectedKey, filePath);
-						_setStatus(`Exported "${filePath}".`);
-					} catch (err) {
-						logger.error(err);
-						_setStatus(err.message);
-						return;
-					}
+					await _doExport(selectedKey);
 					break;
 			}
 			DeluxeCLI.focus(listActions);
@@ -660,6 +601,130 @@ class _class extends BaseInterface {
 		}
 	}
 
+	async _doCopy(key) {
+		const {logger, _setStatus, view: _view} = this;
+
+		try {
+			_setStatus(`Copying "${key}".`);
+			const content = await _view(key);
+			_setStatus(`Copied content to clipboard.`);
+			Clipboard.writeSync(content);
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+		}
+	}
+
+	async _doView(key, options) {
+		const {logger, _setStatus, _showViewWindow, view: _view} = this;
+
+		try {
+			_setStatus(`Viewing "${key}".`);
+			const content = await _view(key);
+			await _showViewWindow(key, content, options);
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+		}
+	}
+
+	async _doOpen(key) {
+		const {logger, _setStatus, open: _open} = this;
+
+		try {
+			_setStatus(`Opening "${key}".`);
+			await _open(key);
+			_setStatus(`Closed "${key}".`);
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+		}
+	}
+
+	async _doEdit(key) {
+		const {logger, _setStatus, _prompt, store: _store} = this;
+
+		let value;
+		try {
+			_setStatus(`Storing new value for "${key}".`);
+			value = await _prompt(`Please enter the value for "${key}"`, {
+				id: "windowStoreVal",
+				inputLabel: " Value ",
+				btnValue: "Done",
+				windowLabel: " Edit key/value "
+			});
+		} catch (err) {
+			_setStatus(err.message);
+			return;
+		}
+		try {
+			await _store(key, value);
+			_setStatus(`Stored "${key}" successfully.`);
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+		}
+	}
+
+	async _doDelete(key) {
+		const {logger, _setStatus, delete: _delete} = this;
+
+		try {
+			await _delete(key);
+			_setStatus(`Deleted "${key}".`);
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+		}
+	}
+
+	async _doExport(key) {
+		const {logger, _setStatus, _prompt, export: _export} = this;
+
+		let filePath;
+		try {
+			filePath = await _prompt(`Please enter the export file path for "${key}"`, {
+				id: "windowExportFile",
+				inputLabel: " File path ",
+				inputValue: Utils.ensureExtension(path.join(process.cwd(), path.parse(key).base)),
+				btnValue: "Done",
+				windowLabel: " Export file "
+			});
+		} catch (err) {
+			_setStatus(err.message);
+			return;
+		}
+		try {
+			_setStatus(`Exporting "${key}" to "${filePath}".`);
+			await _export(key, filePath);
+			_setStatus(`Exported "${filePath}".`);
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+		}
+	}
+
+	_showViewWindow(key, content, options) {
+		const {theme, components} = this;
+		const {screen} = components;
+
+		return new Promise((resolve, reject) => {
+			const view = new WindowView({
+				id: "windowView",
+				heading: key,
+				content,
+				...options,
+				onSubmit: resolve,
+				onClose: () => {
+					reject(new Error("User closed."));
+				}
+			});
+			theme.applyToComponent(view.component);
+			screen.addChild(view.component);
+			view.focus();
+		});
+	}
+
 	_showAboutWindow(options) {
 		const {theme, components} = this;
 		const {screen} = components;
@@ -679,6 +744,7 @@ class _class extends BaseInterface {
 		});
 	}
 
+	//Override
 	_execChildProcess(command) {
 		const {logger} = this;
 		DeluxeCLI.showLog(logger.memory);
@@ -688,6 +754,7 @@ class _class extends BaseInterface {
 		});
 	}
 
+	//Override
 	_prompt(question, options) {
 		const {theme, components} = this;
 		const {screen} = components;
@@ -708,6 +775,7 @@ class _class extends BaseInterface {
 		});
 	}
 
+	//Override
 	async _promptPassExisting(options) {
 		const {_prompt} = this;
 
@@ -722,6 +790,7 @@ class _class extends BaseInterface {
 		});
 	}
 
+	//Override
 	async _promptPassNew(options) {
 		const {_setStatus, _prompt, _promptPassNew} = this;
 
