@@ -28,7 +28,7 @@ class WindowPrompt {
 			id: `${id}_input`,
 			position: Input.DEFAULT_POSITION.extend({
 				labelOriginX: ORIGIN.X.LEFT,
-				marginBottom: 3
+				marginBottom: 1
 			}),
 			label: inputLabel,
 			value: inputValue,

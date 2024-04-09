@@ -32,6 +32,7 @@ const CONFIG = {
 	debug: false,
 	backup: PORTABLE_MODE ? false : true,
 	store: PORTABLE_MODE ? path.join(`.${packageName}`, `store.${packageName}`) : path.join(DEFAULT_DIR, `store.${packageName}`),
+	requirePassEachOperation: false,
 	sync: {
 		enabled: false,
 		init: `rclone mkdir remote:${packageName}`,

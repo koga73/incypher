@@ -6,18 +6,11 @@ class WindowView {
 	constructor({id, heading, content, userClosable = true, onSubmit = null, onClose = null}) {
 		const txtContent = new Text({
 			id: `${id}_content`,
-			label: ` ${heading} `,
 			value: content,
 			position: Text.DEFAULT_POSITION.extend({
 				originX: ORIGIN.X.CENTER, //Center the text horizontally
-				originY: ORIGIN.Y.CENTER, //Center the text vertically
 				labelOriginX: ORIGIN.X.LEFT,
-				paddingTop: 1,
-				paddingRight: 3,
-				paddingBottom: 1,
-				paddingLeft: 3,
-				width: content.length + 6 + 2,
-				height: 5
+				marginBottom: 1
 			})
 		});
 
@@ -46,7 +39,7 @@ class WindowView {
 			style: Window.DEFAULT_STYLE.extend({
 				border: BORDER.DOUBLE
 			}),
-			label: ` View `,
+			label: ` ${heading} `,
 			children: [txtContent, btnSubmit],
 			userClosable,
 			onSelect: doSubmit,

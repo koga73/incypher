@@ -55,6 +55,10 @@ class _class extends BaseInterface {
 	async execute(args) {
 		const {logger, _setStatus, _doExit, _doStore, _doList, _doImport, _doConfig, _doPassphrase, _doErase, _doNuke, _toggleLog, _doAbout} = this;
 
+		logger.log("");
+		logger.log(`${packageName} ${packageVersion}`);
+		logger.log("");
+
 		const listMenu = new List({
 			id: "listMenu",
 			label: " Main Menu ",
@@ -766,7 +770,7 @@ class _class extends BaseInterface {
 				...options,
 				onSubmit: resolve,
 				onClose: () => {
-					reject(new Error("User cancelled."));
+					reject(new Error("User closed."));
 				}
 			});
 			theme.applyToComponent(prompt.component);

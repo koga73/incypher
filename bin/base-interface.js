@@ -14,6 +14,7 @@ class _class {
 		this.defaultDir = defaultDir;
 		this.configFile = configFile;
 		this.filePath = config.store;
+		this.cachedPass = null;
 
 		this.logger = console;
 
@@ -208,7 +209,7 @@ class _class {
 	}
 
 	async _readStore() {
-		const {zip, filePath, config, logger, _promptPassExisting, _execChildProcess} = this;
+		const {zip, filePath, config, logger, cachedPass, _promptPassExisting, _execChildProcess} = this;
 
 		if (config.sync.enabled) {
 			logger.log("SYNC DOWNLOAD");
@@ -226,10 +227,17 @@ class _class {
 		logger.log("READ", filePath);
 		const success = await zip.load(filePath);
 
-		let pass = null;
+		let pass = cachedPass;
 		try {
-			pass = success ? (zip.isEncrypted ? await _promptPassExisting() : "") : null;
+			if (!pass) {
+				pass = success ? (zip.isEncrypted ? await _promptPassExisting() : "") : null;
+			}
 			await zip.decrypt(pass);
+
+			//Store pass in memory so it doesn't need to be entered again
+			if (pass !== cachedPass && config.requirePassEachOperation !== true) {
+				this.cachedPass = pass;
+			}
 		} catch (err) {
 			logger.error(err);
 			throw new Error("Failed to decrypt keystore");

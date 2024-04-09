@@ -71,9 +71,6 @@ class ThemeInteractive extends Theme {
 			borderColor: COLORS.FG.MAGENTA
 		}),
 		windowView_content: new Style({
-			border: BORDER.SINGLE,
-			borderColor: COLORS.FG.BLACK,
-			borderBackgroundColor: COLORS.BG.YELLOW,
 			color: COLORS.FG.YELLOW,
 			labelColor: COLORS.FG.WHITE
 		})

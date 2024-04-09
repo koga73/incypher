@@ -21,7 +21,10 @@ class WindowPrompt {
 		});
 		const txtDescription = new Text({
 			id: `${id}_description`,
-			value: `${ThemeInteractive.COLORS.LABEL}Description:${ThemeInteractive.COLORS.TEXT} ${packageDescription}`
+			value: `${ThemeInteractive.COLORS.LABEL}Description:${ThemeInteractive.COLORS.TEXT} ${packageDescription}`,
+			position: Text.DEFAULT_POSITION.extend({
+				marginBottom: 1
+			})
 		});
 
 		const btnSubmit = new Button({
