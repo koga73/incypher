@@ -24,25 +24,33 @@ Download the executables from the [latest release](https://github.com/koga73/inc
 
 ## Usage
 
+### Interactive mode
+
+```
+incypher
+```
+
+### Command line mode
+
 ##### Store seed phrase or keys
 
 ```
-incypher store ravencoin
-incypher store seed/ravencoin
+incypher store bitcoin
+incypher store seed/bitcoin
 ```
 
 ##### View seed phrase or key in console
 
 ```
-incypher view ravencoin
-incypher view seed/ravencoin
+incypher view bitcoin
+incypher view seed/bitcoin
 ```
 
 ##### Open seed phrase or key with file system default
 
 ```
-incypher open ravencoin
-incypher open seed/ravencoin
+incypher open bitcoin
+incypher open seed/bitcoin
 ```
 
 ##### List stores
@@ -54,23 +62,23 @@ incypher list
 ##### Delete store(s)
 
 ```
-incypher delete ravencoin
-incypher delete seed/ravencoin
+incypher delete bitcoin
+incypher delete seed/bitcoin
 incypher delete seed
 ```
 
 ##### Import file
 
 ```
-incypher import ./ravencoin.txt
-incypher import ./ravencoin.txt seed/ravencoin
+incypher import ./bitcoin.txt
+incypher import ./bitcoin.txt seed/bitcoin
 ```
 
 ##### Export file
 
 ```
-incypher export ravencoin
-incypher export seed/ravencoin ./ravencoin.txt
+incypher export bitcoin
+incypher export seed/bitcoin ./bitcoin.txt
 ```
 
 ##### Change password
@@ -82,7 +90,7 @@ incypher password
 ##### Secure erase
 
 ```
-incypher erase ./ravencoin.txt
+incypher erase ./bitcoin.txt
 incypher nuke
 ```
 

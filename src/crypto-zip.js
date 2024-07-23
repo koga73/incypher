@@ -1,14 +1,15 @@
 //Node imports
-const {promises: fs} = require("fs");
-const path = require("path");
+import {promises as fs} from "fs";
+import path from "path";
 
 //Node imports
-const Zip = require("./zip");
-const CryptoProvider = require("./crypto-provider");
-const Utils = require("./utils");
+import Zip from "./zip.js";
+import CryptoProvider from "./crypto-provider.js";
+import Utils from "./utils.js";
 
 //Local imports
-const {name: packageName, version: packageVersion, author: packageAuthor} = require("../package.json");
+import packageJson from "../package.json" assert {type: "json"};
+const {name: packageName, version: packageVersion, author: packageAuthor} = packageJson;
 
 //Header data constants
 const FILE_MESSAGE = `encrypted with ${packageName} ${Utils.getFixedVersion(packageVersion)} \n`;
@@ -21,17 +22,22 @@ const HEADER_SIZE = FILE_MESSAGE.length + CryptoProvider.IV_LEN + INCREMENTAL_BU
 const FILE_MESSAGE_REGEX = /^(.+?)\d+[\s\S]*$/;
 
 class _class extends Zip {
-	constructor(config) {
-		super(config);
+	constructor(config, logger) {
+		super(config, logger);
 
 		this.currentIncrement = (CryptoProvider.random() * 0xffff) >> 0; //Start with a random increment
 		this.content = "";
 		this.isEncrypted = false;
+
+		this.load = this.load.bind(this);
+		this.save = this.save.bind(this);
+		this.decrypt = this.decrypt.bind(this);
+		this.encrypt = this.encrypt.bind(this);
 	}
 
 	async load(filePath) {
 		if (this.config.debug) {
-			console.info("crypto-zip::load", filePath);
+			this.logger.info("crypto-zip::load", filePath);
 		}
 		if (!(await Utils.fsExists(filePath))) {
 			return false;
@@ -44,7 +50,7 @@ class _class extends Zip {
 
 	async save(filePath) {
 		if (this.config.debug) {
-			console.info("crypto-zip::save", filePath);
+			this.logger.info("crypto-zip::save", filePath);
 		}
 		const content = this.content;
 		await fs.writeFile(filePath, content);
@@ -57,7 +63,7 @@ class _class extends Zip {
 
 	async decrypt(passphrase) {
 		if (this.config.debug) {
-			console.info("crypto-zip::decrypt");
+			this.logger.info("crypto-zip::decrypt");
 		}
 		const content = this.content;
 		if (!(content && content.length)) {
@@ -94,7 +100,7 @@ class _class extends Zip {
 	//Encryption takes place using AES-256-GCM and the GCM integrity tag is appended to the end of the ciphertext
 	async encrypt(passphrase) {
 		if (this.config.debug) {
-			console.info("crypto-zip::encrypt");
+			this.logger.info("crypto-zip::encrypt");
 		}
 		const stream = await this.getStream();
 		if (!(stream && stream.length)) {
@@ -119,7 +125,7 @@ class _class extends Zip {
 		}
 	}
 }
-module.exports = _class;
+export default _class;
 
 //Determine if file content is encrypted
 function _isEncrypted(content) {
