@@ -154,11 +154,11 @@ class _class extends BaseInterface {
 			},
 			onKeyPress: (str, key) => {
 				//On escape jump to exit, if on exit then doExit
-				if (key.escape) {
-					if (listMenu.selectedIndex === 0) {
+				if (key.name === "escape") {
+					if (listMenu.activeIndex === 0) {
 						_doExit();
 					} else {
-						listMenu.selectedIndex = 0;
+						listMenu.activeIndex = 0;
 					}
 				}
 			}
@@ -285,7 +285,7 @@ class _class extends BaseInterface {
 			_this.theme.applyToComponent(listActions);
 			_this.theme.applyToComponent(screenMain);
 
-			DeluxeCLI.debug = true;
+			//DeluxeCLI.debug = true;
 			DeluxeCLI.initialize({exitOnEscape: false});
 			DeluxeCLI.clear();
 			DeluxeCLI.render(screenMain);
@@ -295,7 +295,7 @@ class _class extends BaseInterface {
 				if (key.ctrl === true && key.name === "l") {
 					_this._toggleLog();
 				}
-				if (key.escape && _this._showingLog) {
+				if (key.name === "escape" && _this._showingLog) {
 					_this._toggleLog();
 				}
 			};
