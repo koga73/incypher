@@ -11,7 +11,7 @@ import packageJson from "../package.json" assert {type: "json"};
 const {name: packageName, version: packageVersion, author: packageAuthor} = packageJson;
 
 //Misc constants
-const EXAMPLE_NAME = "ravencoin";
+const EXAMPLE_NAME = "bitcoin";
 
 class _class extends BaseInterface {
 	constructor(config, filePaths) {
