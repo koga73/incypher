@@ -1,9 +1,9 @@
 const exe = require("@angablue/exe");
-const {bin: packageBin, name: packageName, version: packageVersion, description: packageDescription, author: packageAuthor} = require("./package.json");
+const {bin: packageBin, name: packageName, version: packageVersion, description: packageDescription, author: packageAuthor} = require("../package.json");
 
 const year = new Date().getFullYear();
 const build = exe({
-	entry: packageBin[packageName],
+	entry: `build/${packageName}.js`,
 	out: `build/${packageName}-win.exe`,
 	pkg: [],
 	version: `${packageVersion}.0`,
