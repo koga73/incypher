@@ -1,0 +1,4 @@
+{
+	"main": "./build/incypher.js",
+	"output": "./build/incypher.blob"
+}
