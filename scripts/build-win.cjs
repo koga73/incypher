@@ -3,10 +3,10 @@ const {bin: packageBin, name: packageName, version: packageVersion, description:
 
 const year = new Date().getFullYear();
 const build = exe({
-	entry: `build/${packageName}.js`,
-	out: `build/${packageName}-win.exe`,
-	pkg: [],
-	version: `${packageVersion}.0`,
+	entry: `build/${packageName}.cjs`,
+	out: `build/${packageName}.exe`,
+	skipBundle: true,
+	version: packageVersion,
 	icon: "./_artifacts/icon-logo.ico",
 	properties: {
 		FileDescription: packageDescription,
