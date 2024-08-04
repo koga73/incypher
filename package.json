@@ -23,7 +23,7 @@
 		"jszip": "3.10.1"
 	},
 	"devDependencies": {
-		"@angablue/exe": "^3.2.2",
+		"@angablue/exe": "3.2.3",
 		"@babel/core": "^7.24.9",
 		"@babel/plugin-syntax-import-assertions": "^7.24.7",
 		"@babel/preset-env": "^7.24.8",
