@@ -1,5 +1,6 @@
 const path = require("path");
 
+const TerserPlugin = require("terser-webpack-plugin");
 const nodeExternals = require("webpack-node-externals");
 
 const packageJson = require("./package.json");
@@ -36,6 +37,18 @@ module.exports = {
 					}
 				}
 			}
+		]
+	},
+	optimization: {
+		minimize: true,
+		minimizer: [
+			new TerserPlugin({
+				terserOptions: {
+					//Required to prevent colors such as \x1b[30m from being converted to unicode
+					keep_fnames: true,
+					output: {ascii_only: true}
+				}
+			})
 		]
 	}
 };
