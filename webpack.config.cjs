@@ -47,7 +47,9 @@ module.exports = {
 					//Required to prevent colors such as \x1b[30m from being converted to unicode
 					keep_fnames: true,
 					output: {ascii_only: true}
-				}
+				},
+				// Remove comments and license output
+				extractComments: false
 			})
 		]
 	}

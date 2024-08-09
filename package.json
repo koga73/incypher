@@ -8,9 +8,10 @@
 	},
 	"scripts": {
 		"clean": "rimraf ./build",
-		"build": "npm run build:webpack && npm run build:exe",
+		"build": "npm run build:webpack && npm run build:elf && npm run build:exe",
 		"build:webpack": "webpack",
-		"build:exe": "exe config-exe.json",
+		"build:elf": "pkg build/incypher.cjs --targets node18-linux-x64,node18-macos-x64 --output ./build/incypher",
+		"build:exe": "exe exe.json",
 		"cli": "node ./bin/cli.js"
 	},
 	"author": {
@@ -28,6 +29,7 @@
 		"@babel/plugin-syntax-import-assertions": "^7.24.7",
 		"@babel/preset-env": "^7.24.8",
 		"babel-loader": "^9.1.3",
+		"pkg": "^5.8.1",
 		"postject": "^1.0.0-alpha.6",
 		"rimraf": "^4.0.5",
 		"terser-webpack-plugin": "^5.3.10",
