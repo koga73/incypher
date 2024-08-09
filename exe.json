@@ -1,0 +1,14 @@
+{
+	"entry": "build/{package:name}.cjs",
+	"out": "build/{package:name}.exe",
+	"skipBundle": true,
+	"version": "{package:version}",
+	"icon": "_artifacts/icon-logo.ico",
+	"executionLevel": "asInvoker",
+	"properties": {
+		"FileDescription": "{package:description}",
+		"ProductName": "{package:name}",
+		"LegalCopyright": "copyright {package:author.name}",
+		"OriginalFilename": "{package:name}.exe"
+	}
+}

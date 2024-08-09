@@ -1,6 +1,6 @@
 //Node imports
-const {promises: fs} = require("fs");
-const path = require("path");
+import {promises as fs} from "fs";
+import path from "path";
 
 class _class {
 	static async fsExists(filePath) {
@@ -31,4 +31,4 @@ class _class {
 			.toString("hex");
 	}
 }
-module.exports = _class;
+export default _class;

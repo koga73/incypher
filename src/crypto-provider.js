@@ -1,4 +1,4 @@
-const crypto = require("crypto");
+import crypto from "crypto";
 
 class _class {
 	static SYMMETRIC_ALGORITHM = "AES-256-GCM";
@@ -114,7 +114,7 @@ class _class {
 		return fixedVal;
 	}
 }
-module.exports = _class;
+export default _class;
 
 function isString(str) {
 	return typeof str === typeof "";
