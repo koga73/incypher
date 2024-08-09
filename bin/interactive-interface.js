@@ -461,7 +461,8 @@ class _class extends BaseInterface {
 					break;
 				case "delete":
 					await _doDelete(selectedKey);
-					backToKeys();
+					backToMenu();
+					return;
 					break;
 				case "export":
 					await _doExport(selectedKey);
