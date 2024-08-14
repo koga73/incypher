@@ -36,6 +36,8 @@ class _class extends BaseInterface {
 		this._doList = this._doList.bind(this);
 		this._doImport = this._doImport.bind(this);
 		this._doConfig = this._doConfig.bind(this);
+		this._doSyncDownload = this._doSyncDownload.bind(this);
+		this._doSyncUpload = this._doSyncUpload.bind(this);
 		this._doPassphrase = this._doPassphrase.bind(this);
 		this._doErase = this._doErase.bind(this);
 		this._doNuke = this._doNuke.bind(this);
@@ -43,6 +45,7 @@ class _class extends BaseInterface {
 		this._doCopy = this._doCopy.bind(this);
 		this._doView = this._doView.bind(this);
 		this._doOpen = this._doOpen.bind(this);
+		this._doRename = this._doRename.bind(this);
 		this._doEdit = this._doEdit.bind(this);
 		this._doDelete = this._doDelete.bind(this);
 		this._doExport = this._doExport.bind(this);
@@ -53,7 +56,7 @@ class _class extends BaseInterface {
 
 	//Override
 	async execute(args) {
-		const {logger, _setStatus, _doExit, _doStore, _doList, _doImport, _doConfig, _doPassphrase, _doErase, _doNuke, _toggleLog, _doAbout} = this;
+		const {logger, _setStatus, _doExit, _doStore, _doList, _doImport, _doConfig, _doPassphrase, _doSyncDownload, _doSyncUpload, _doErase, _doNuke, _toggleLog, _doAbout} = this;
 
 		logger.log("");
 		logger.log(`${packageName} ${packageVersion}`);
@@ -93,6 +96,12 @@ class _class extends BaseInterface {
 					case "more...":
 						_setStatus(`More options.`);
 						break;
+					case "sync download":
+						_setStatus(`Run the config sync.download command to download the keystore.`);
+						break;
+					case "sync upload":
+						_setStatus(`Run the config sync.upload command to upload the keystore.`);
+						break;
 					case "erase":
 						_setStatus(`Securely erase a file.`);
 						break;
@@ -127,19 +136,25 @@ class _class extends BaseInterface {
 					case "passphrase":
 						_doPassphrase();
 						break;
+					case "more...":
+						const newItems = [...listMenu.items];
+						newItems.pop(); //Remove "More..."
+						newItems.push("Sync Download", "Sync Upload", "Erase", "Nuke", "Log", "About");
+						listMenu.items = newItems;
+						listMenu.activeIndex = newItems.length - 6;
+						listMenu.selectedIndex = -1;
+						break;
+					case "sync download":
+						_doSyncDownload();
+						break;
+					case "sync upload":
+						_doSyncUpload();
+						break;
 					case "erase":
 						_doErase();
 						break;
 					case "nuke":
 						_doNuke();
-						break;
-					case "more...":
-						const newItems = [...listMenu.items];
-						newItems.pop(); //Remove "More..."
-						newItems.push("Erase", "Nuke", "Log", "About");
-						listMenu.items = newItems;
-						listMenu.activeIndex = newItems.length - 4;
-						listMenu.selectedIndex = -1;
 						break;
 					case "log":
 						logger.log();
@@ -383,7 +398,7 @@ class _class extends BaseInterface {
 	async _doList() {
 		const {logger, components, _setStatus} = this;
 		const {store: _store, view: _view, open: _open, delete: _delete, export: _export} = this;
-		const {_doCopy, _doView, _doOpen, _doEdit, _doDelete, _doExport} = this;
+		const {_doCopy, _doView, _doOpen, _doRename, _doEdit, _doDelete, _doExport} = this;
 		const {listMenu, listKeys, sbListKeys, listActions, screen} = components;
 
 		let list = [];
@@ -420,9 +435,9 @@ class _class extends BaseInterface {
 
 			//Change the actions based on whether we have a file extension
 			if (/\.\w+$/i.test(selectedItem)) {
-				listActions.items = ["< Back", "Open", "Delete", "Export"];
+				listActions.items = ["< Back", "Open", "Rename", "Delete", "Export"];
 			} else {
-				listActions.items = ["< Back", "Copy", "View", "Open", "Edit", "Delete", "Export"];
+				listActions.items = ["< Back", "Copy", "View", "Open", "Rename", "Edit", "Delete", "Export"];
 			}
 			screen.addChild(listActions);
 			DeluxeCLI.focus(listActions);
@@ -456,12 +471,18 @@ class _class extends BaseInterface {
 				case "open":
 					await _doOpen(selectedKey);
 					break;
+				case "rename":
+					await _doRename(selectedKey);
+					backToMenu();
+					return;
+					break;
 				case "edit":
 					await _doEdit(selectedKey);
 					break;
 				case "delete":
 					await _doDelete(selectedKey);
-					backToKeys();
+					backToMenu();
+					return;
 					break;
 				case "export":
 					await _doExport(selectedKey);
@@ -518,6 +539,32 @@ class _class extends BaseInterface {
 			_openConfig();
 			_setStatus(`Closed. Please reload to apply changes.`);
 			_doExit();
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+			return;
+		}
+	}
+
+	_doSyncDownload() {
+		const {logger, syncDownload, _setStatus} = this;
+		try {
+			_setStatus(`Running config sync.download command.`);
+			syncDownload();
+			_setStatus(`Sync download successful.`);
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+			return;
+		}
+	}
+
+	_doSyncUpload() {
+		const {logger, syncUpload, _setStatus} = this;
+		try {
+			_setStatus(`Running config sync.upload command.`);
+			syncUpload();
+			_setStatus(`Sync upload successful.`);
 		} catch (err) {
 			logger.error(err);
 			_setStatus(err.message);
@@ -645,6 +692,34 @@ class _class extends BaseInterface {
 		}
 	}
 
+	async _doRename(key) {
+		const {logger, _setStatus, _prompt, getRaw: _getRaw, store: _store, delete: _delete} = this;
+
+		let newKey;
+		try {
+			_setStatus(`Renaming "${key}".`);
+			newKey = await _prompt(`Please enter the name for "${key}"`, {
+				id: "windowRenameKey",
+				inputLabel: " Key ",
+				inputValue: key,
+				btnValue: "Done",
+				windowLabel: " Rename key "
+			});
+		} catch (err) {
+			_setStatus(err.message);
+			return;
+		}
+		try {
+			const value = await _getRaw(key);
+			await _store(newKey, value);
+			await _delete(key);
+			_setStatus(`Stored "${newKey}" successfully.`);
+		} catch (err) {
+			logger.error(err);
+			_setStatus(err.message);
+		}
+	}
+
 	async _doEdit(key) {
 		const {logger, _setStatus, _prompt, store: _store} = this;
 
@@ -655,7 +730,7 @@ class _class extends BaseInterface {
 				id: "windowStoreVal",
 				inputLabel: " Value ",
 				btnValue: "Done",
-				windowLabel: " Edit key/value "
+				windowLabel: " Edit value "
 			});
 		} catch (err) {
 			_setStatus(err.message);

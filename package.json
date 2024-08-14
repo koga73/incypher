@@ -1,6 +1,6 @@
 {
 	"name": "incypher",
-	"version": "0.9.0",
+	"version": "0.10.0",
 	"description": "An encrypted keystore intended to store crypto keys, seed phrases, passwords, files and other sensitive data",
 	"type": "module",
 	"bin": {

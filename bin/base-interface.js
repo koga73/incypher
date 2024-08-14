@@ -20,6 +20,7 @@ class _class {
 
 		this.store = this.store.bind(this);
 		this.view = this.view.bind(this);
+		this.getRaw = this.getRaw.bind(this);
 		this.open = this.open.bind(this);
 		this.list = this.list.bind(this);
 		this.delete = this.delete.bind(this);
@@ -29,6 +30,8 @@ class _class {
 		this.erase = this.erase.bind(this);
 		this.nuke = this.nuke.bind(this);
 		this.openConfig = this.openConfig.bind(this);
+		this.syncDownload = this.syncDownload.bind(this);
+		this.syncUpload = this.syncUpload.bind(this);
 
 		this._readStore = this._readStore.bind(this);
 		this._writeStore = this._writeStore.bind(this);
@@ -56,6 +59,19 @@ class _class {
 		logger.log("STORE", key);
 		zip.store(key, value);
 		await _writeStore(pass);
+	}
+
+	async getRaw(key) {
+		const {zip, logger, _readStore} = this;
+
+		await _readStore();
+		logger.log("GET RAW", key);
+		logger.log("");
+		const content = await zip.retrieve(key, "uint8array");
+		if (content === null) {
+			logger.log("   ", `--- not found ---`);
+		}
+		return content;
 	}
 
 	async view(key) {
@@ -208,20 +224,40 @@ class _class {
 		childProcess.execSync(configFile);
 	}
 
+	syncDownload() {
+		const {config, logger, _execChildProcess} = this;
+
+		logger.log("SYNC DOWNLOAD");
+		if (config.debug) {
+			logger.log(config.sync.download);
+		}
+
+		try {
+			_execChildProcess(config.sync.download);
+		} catch (err) {
+			throw new Error("Sync download command failed");
+		}
+	}
+
+	syncUpload() {
+		const {config, logger, _execChildProcess} = this;
+
+		logger.log("SYNC UPLOAD");
+		if (config.debug) {
+			logger.log(config.sync.upload);
+		}
+		try {
+			_execChildProcess(config.sync.upload);
+		} catch (err) {
+			throw new Error("Sync upload command failed");
+		}
+	}
+
 	async _readStore() {
-		const {zip, filePath, config, logger, cachedPass, _promptPassExisting, _execChildProcess} = this;
+		const {zip, filePath, config, logger, cachedPass, syncDownload, _promptPassExisting} = this;
 
 		if (config.sync.enabled) {
-			logger.log("SYNC DOWNLOAD");
-			if (config.debug) {
-				logger.log(config.sync.download);
-			}
-
-			try {
-				_execChildProcess(config.sync.download);
-			} catch (err) {
-				throw new Error("Sync download command failed");
-			}
+			syncDownload();
 		}
 
 		logger.log("READ", filePath);
@@ -247,7 +283,7 @@ class _class {
 	}
 
 	async _writeStore(pass = null) {
-		const {zip, filePath, config, logger, _promptPassNew, _execChildProcess} = this;
+		const {zip, filePath, config, logger, syncUpload, _promptPassNew} = this;
 
 		try {
 			await zip.encrypt(pass !== null ? pass : await _promptPassNew());
@@ -260,15 +296,7 @@ class _class {
 		await zip.save(filePath);
 
 		if (config.sync.enabled) {
-			logger.log("SYNC UPLOAD");
-			if (config.debug) {
-				logger.log(config.sync.upload);
-			}
-			try {
-				_execChildProcess(config.sync.upload);
-			} catch (err) {
-				throw new Error("Sync upload command failed");
-			}
+			syncUpload();
 		}
 	}
 
